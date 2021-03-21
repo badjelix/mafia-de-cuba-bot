@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 GUILD = os.getenv('DISCORD_GUILD')
+guild = ''
 
 intents = discord.Intents.default()
 intents.members = True
@@ -17,6 +18,7 @@ client = discord.Client(intents=intents)
 
 @client.event
 async def on_ready():
+    global guild
     guild = discord.utils.get(client.guilds, name=GUILD)
     print('Mafia de Cuba bot is up.')
 
@@ -70,14 +72,17 @@ def constructTable(currentPlayer):
         else:
             tableString += '(' + str(i+1) + ') ' + playersOrder[i] + '\n'
     
-    tableString += '\n **Godfather**: ' + godfather + ' :ring:\n\n'
+    if godfather == currentPlayer:
+        tableString += '\n **Godfather**: ' + godfather + ' :ring: :briefcase:\n\n'
+    else:
+        tableString += '\n **Godfather**: ' + godfather + ' :ring:\n\n'
 
     return tableString
 
 
 @client.event
 async def on_message(message):
-    global opened, started, players, numberOfPlayers, box, godfather
+    global guild, opened, started, players, numberOfPlayers, box, godfather
 
     # Opening game session
     if message.content == '!mafia open':
@@ -157,11 +162,21 @@ async def on_message(message):
 
                 random.shuffle(playersOrder)
 
-                tableString = constructTable(playersOrder[0])
+                tableString = constructTable(godfather)
 
                 boxString = constructBox('start', message.author.name)
 
                 await message.channel.send(tableString + boxString)
+
+                godfatherMember = ''
+                for member in guild.members:
+                    if member.name == godfather:
+                        godfatherMember = member
+
+                await member.create_dm()
+                await member.dm_channel.send('És o filho da puta do padrinho e tens de tirar diamantes')
+
+
 
         elif not opened:
             await message.channel.send(
