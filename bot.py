@@ -26,4 +26,13 @@ async def on_ready():
     members = '\n - '.join([member.name for member in guild.members])
     print(f'Guild Members:\n - {members}')
 
+@client.event
+async def on_message(start):
+    if start.content == 'start_mafia':
+
+        @client.event
+        async def on_message(join):
+            if join.content == 'join_mafia':
+                pass
+
 client.run(TOKEN)
