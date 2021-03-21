@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 GUILD = os.getenv('DISCORD_GUILD')
+CHANNEL = os.getenv('DISCORD_CHANNEL')
 guild = ''
 
 intents = discord.Intents.default()
@@ -18,14 +19,19 @@ client = discord.Client(intents=intents)
 
 @client.event
 async def on_ready():
-    global guild
+    global guild, guildChannel
     guild = discord.utils.get(client.guilds, name=GUILD)
+    for channel in guild.channels:
+        if channel.name == CHANNEL:
+            guildChannel = channel
+
     print('Mafia de Cuba bot is up.')
 
 
 # Global game variables
 opened = False
 started = False
+godfatherSelect = False
 numberOfPlayers = 0
 players = {}
 box = {}
@@ -82,13 +88,14 @@ def constructTable(currentPlayer):
 
 @client.event
 async def on_message(message):
-    global guild, opened, started, players, numberOfPlayers, box, godfather
+    global guild, guildChannel, opened, started, players, numberOfPlayers, box, godfather, godfatherSelect
+
 
     # Opening game session
     if message.content == '!mafia open':
         if not opened:
             opened = True
-            await message.channel.send(
+            await guildChannel.send(
                 ':dagger: Buenas noches hijos de puta! :dagger:\n\n'
                 ':arrow_right: Use `!mafia join` to join the session.\n'
                 ':arrow_right: Use `!mafia leave` to leave the session.\n'
@@ -97,45 +104,48 @@ async def on_message(message):
                 ':gem: To start the game you need 5 to 12 players in the session.'
             )
         else:
-            await message.channel.send(
+            await guildChannel.send(
                 f'{message.author.name} is a Tony Hawking. The game is already opened...'
             )
+
 
     # Player joining
     elif message.content == '!mafia join':
         if opened and (not started) and (message.author.name not in players.keys()):
             players[message.author.name] = 'TBD'
             playerList = '\n - '.join(players.keys())
-            await message.channel.send(
+            await guildChannel.send(
                 f'{message.author.name} joined the game! :gun:\nPlayers in the room **[{len(players)}]**:\n - {playerList}'
             )
         elif message.author.name in players.keys():
-            await message.channel.send(
+            await guildChannel.send(
                 f'{message.author.name} is a Tony Hawking. You are already in the room...'
             )
         elif started:
-            await message.dm_channel.send(
+            await guildChannel.send(
                 f'Sorry {message.author.name}, but the game has already started. Wait until it ends and you can join the next one!'
             )
 
+
     # Player leaving
-    elif message.content == "!mafia leave":
+    elif message.content == '!mafia leave':
         if opened and (not started):
             if message.author.name in players.keys():
                 players.pop(message.author.name)
                 playerList = '\n - '.join(players.keys())
-                await message.channel.send(
+                await guildChannel.send(
                     f'{message.author.name} left the game! What a pussy.\nPlayers in the room **[{len(players)}]**:\n - {playerList}'
                 )
 
+
     # Game starting
-    elif message.content == "!mafia start":
+    elif message.content == '!mafia start':
         if godfather == '':
-            await message.channel.send('Select the Godfather before starting the game.')
+            await guildChannel.send('Select the Godfather before starting the game.')
         elif opened:
             numberOfPlayers = len(players)
             if numberOfPlayers < 5 or numberOfPlayers > 12:
-                await message.channel.send('The number of players must be between 5 and 12!')
+                await guildChannel.send('The number of players must be between 5 and 12!')
             else:
                 started = True
 
@@ -166,29 +176,42 @@ async def on_message(message):
 
                 boxString = constructBox('start', message.author.name)
 
-                await message.channel.send(tableString + boxString)
+                await guildChannel.send(tableString + boxString)
 
                 godfatherMember = ''
                 for member in guild.members:
                     if member.name == godfather:
                         godfatherMember = member
 
-                await member.create_dm()
-                await member.dm_channel.send('És o filho da puta do padrinho e tens de tirar diamantes')
+                godfatherSelect = True
 
-
-
+                await godfatherMember.create_dm()
+                await godfatherMember.dm_channel.send(f'Godfather {godfatherMember.name}, ' +
+                                                        'please select how many diamonds you want to remove (from 0-5) from the box. ' +
+                                                        'Use the message `!mafia remove <number of diamonds>`\n')
         elif not opened:
-            await message.channel.send(
+            await guildChannel.send(
                 'First you need to open a room with "!mafia open".\n'
                 'In case you need help use "!mafia help".'
             )
     
+
     # Godfather selected
-    elif message.content == "!mafia godfather":
+    elif message.content == '!mafia godfather':
         if opened and (not started):
             players[message.author.name] = 'godfather'
             godfather = message.author.name
-            await message.channel.send(f'{message.author.name} is the Godfather! :ring:')
+            await guildChannel.send(f'{message.author.name} is the Godfather! :ring:')
+
+
+    # Godfather removes diamonds from box
+    elif message.content[:13] == '!mafia remove':
+        if started and godfatherSelect and (message.author.name == godfather) and (int(message.content[14]) <= 5 and int(message.content[14]) >= 0):
+            box["diamonds"] = box["diamonds"] - int(message.content[14])
+            await guildChannel.send('**The Godfather passed the box!**\n\n' + constructTable(playersOrder[0]))
+            godfatherSelect = False
+        elif started and godfatherSelect and (message.author.name == godfather) and (int(message.content[14]) > 5 or int(message.content[14]) < 0):
+            await message.channel.send('You can only remove from 0 to 5 diamonds.')
+
 
 client.run(TOKEN)
