@@ -18,8 +18,8 @@ client = discord.Client(intents=intents)
 @client.event
 async def on_ready():
     guild = discord.utils.get(client.guilds, name=GUILD)
-    client.channel.send('!mafia join')
-    print('Bot1 is up.')
+    await guild.text_channels[1].send('!mafia join')
+    print('Bot3 is up.')
 
 # @client.event
 # async def on_message(message):

@@ -1,4 +1,4 @@
-# bot.py
+# game.py
 import os
 import random
 
@@ -69,6 +69,8 @@ def constructTable(currentPlayer):
             tableString += '(' + str(i+1) + ') ' + playersOrder[i] + '\n'
     
     tableString += '\n Godfather: ' + godfather + ' :ring:\n'
+
+    return tableString
 
 
 @client.event
@@ -146,7 +148,7 @@ async def on_message(message):
                     box = {'loyals':5, 'agents':2, 'taxidrivers':2, 'jokers':2, 'diamonds':15}
 
                 for player in players.keys():
-                    if players['player'] != 'godfather':
+                    if players[player] != 'godfather':
                         playersOrder.append(player)
 
                 random.shuffle(playersOrder)
@@ -154,6 +156,7 @@ async def on_message(message):
                 tableString = constructTable(playersOrder[0])
 
                 boxString = constructBox('start', message.author.name)
+
                 await message.channel.send(tableString + boxString)
 
         elif (not opened):
