@@ -18,7 +18,7 @@ client = discord.Client(intents=intents)
 @client.event
 async def on_ready():
     guild = discord.utils.get(client.guilds, name=GUILD)
-    print('Bot is up.')
+    print('Mafia de Cuba bot is up.')
 
 
 # Global game variables
