@@ -30,13 +30,14 @@ box = {}
 playersOrder = []
 godfather = ''
 
+
 def constructBox(context, name):
     global box, numberOfPlayers
 
     boxString = ''
 
     if context == 'start':
-        boxString += f'This is the box for a {numberOfPlayers} people game: \n\n'
+        boxString += '**Box:**\n\n'
     elif context == 'pass':
         boxString += f'Take the box {name}. Don\' show it to anyone or Tony Hawkings will kill you.\n\n'
     boxString += '----------------- \n'
@@ -57,29 +58,30 @@ def constructBox(context, name):
     return boxString
 
 
+
 def constructTable(currentPlayer):
-    global numberOfPlayers, playersOrder
+    global numberOfPlayers, playersOrder, godfather
 
-    tableString = 'Table: :wrestling:\n'
+    tableString = '**Table:**\n'
 
-    for i in range(numberOfPlayers):
+    for i in range(numberOfPlayers-1):
         if playersOrder[i] == currentPlayer:
             tableString += '(' + str(i+1) + ') **' + playersOrder[i] + '** :briefcase:\n'
         else:
             tableString += '(' + str(i+1) + ') ' + playersOrder[i] + '\n'
     
-    tableString += '\n Godfather: ' + godfather + ' :ring:\n'
+    tableString += '\n **Godfather**: ' + godfather + ' :ring:\n\n'
 
     return tableString
 
 
 @client.event
 async def on_message(message):
-    global opened, started, players, numberOfPlayers, box
+    global opened, started, players, numberOfPlayers, box, godfather
 
     # Opening game session
     if message.content == '!mafia open':
-        if (not opened):
+        if not opened:
             opened = True
             await message.channel.send(
                 ':dagger: Buenas noches hijos de puta! :dagger:\n\n'
@@ -123,7 +125,9 @@ async def on_message(message):
 
     # Game starting
     elif message.content == "!mafia start":
-        if opened:
+        if godfather == '':
+            await message.channel.send('Select the Godfather before starting the game.')
+        elif opened:
             numberOfPlayers = len(players)
             if numberOfPlayers < 5 or numberOfPlayers > 12:
                 await message.channel.send('The number of players must be between 5 and 12!')
@@ -148,7 +152,7 @@ async def on_message(message):
                     box = {'loyals':5, 'agents':2, 'taxidrivers':2, 'jokers':2, 'diamonds':15}
 
                 for player in players.keys():
-                    if players[player] != 'godfather':
+                    if player != godfather:
                         playersOrder.append(player)
 
                 random.shuffle(playersOrder)
@@ -159,7 +163,7 @@ async def on_message(message):
 
                 await message.channel.send(tableString + boxString)
 
-        elif (not opened):
+        elif not opened:
             await message.channel.send(
                 'First you need to open a room with "!mafia open".\n'
                 'In case you need help use "!mafia help".'
