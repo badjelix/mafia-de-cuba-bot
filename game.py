@@ -56,7 +56,8 @@ def constructBox(context, name):
 
     return boxString
 
-def constrcutTable(currentPlayer):
+
+def constructTable(currentPlayer):
     global numberOfPlayers, playersOrder
 
     tableString = 'Table: :wrestling:\n'
@@ -68,6 +69,7 @@ def constrcutTable(currentPlayer):
             tableString += '(' + str(i+1) + ') ' + playersOrder[i] + '\n'
     
     tableString += '\n Godfather: ' + godfather + ' :ring:\n'
+
 
 @client.event
 async def on_message(message):
@@ -93,7 +95,6 @@ async def on_message(message):
     # Player joining
     elif message.content == '!mafia join':
         if opened and (not started) and (message.author.name not in players.keys()):
-            print(f'{message.author.name} joined the room')
             players[message.author.name] = 'TBD'
             playerList = '\n - '.join(players.keys())
             await message.channel.send(
@@ -101,7 +102,7 @@ async def on_message(message):
             )
         elif message.author.name in players.keys():
             await message.channel.send(
-                f'{message.author.name} you are a piece of shit.'
+                f'{message.author.name} is a Tony Hawking. You are already in the room...'
             )
         elif started:
             await message.dm_channel.send(
@@ -150,7 +151,7 @@ async def on_message(message):
 
                 random.shuffle(playersOrder)
 
-                tableString = constrcutTable(playersOrder[0]):
+                tableString = constructTable(playersOrder[0])
 
                 boxString = constructBox('start', message.author.name)
                 await message.channel.send(tableString + boxString)
