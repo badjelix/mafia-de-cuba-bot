@@ -18,43 +18,56 @@ client = discord.Client(intents=intents)
 @client.event
 async def on_ready():
     guild = discord.utils.get(client.guilds, name=GUILD)
-
-    print(
-        f'{client.user} is connected to the following server:\n'
-        f'{guild.name}(id: {guild.id})'
-    )
+    print('Bot is up.')
 
 
+# Global game variables
 opened = False
 started = False
 numberOfPlayers = 0
 players = {}
 box = {}
-playerOrder = []
+playersOrder = []
+godfather = ''
 
-
-def constructBox():
+def constructBox(context, name):
     global box, numberOfPlayers
 
-    boxString = f'Esta é a caixa para o jogo de {numberOfPlayers} pessoas: \n\n'
+    boxString = ''
+
+    if context == 'start':
+        boxString += f'This is the box for a {numberOfPlayers} people game: \n\n'
+    elif context == 'pass':
+        boxString += f'Take the box {name}. Don\' show it to anyone or Tony Hawkings will kill you.\n\n'
     boxString += '----------------- \n'
-    boxString += f'Leais - {box["loyal"]} \n'
-    boxString += f'Bongós - {box["cop"]} \n'
+    boxString += f'Loyals - {box["loyals"]} \n'
+    boxString += f'Agents - {box["agents"]} \n'
 
-    if 'taxidriver' in box:
-        boxString += f'Taxistas - {box["taxidriver"]} \n'
+    if 'taxidrivers' in box:
+        boxString += f'Taxidrivers - {box["taxidrivers"]} \n'
 
-    boxString += f'Diamantes - {box["diamonds"]} \n'
+    boxString += f'Diamonds - {box["diamonds"]} \n'
     boxString += '----------------- \n\n'
 
     if 'jokers' in box:
-        boxString += f'O Padrinho tem {box["jokers"]} Jokers. \n\n'
+        boxString += f'The Godfather has {box["jokers"]} Jokers. \n\n'
     else:
-        boxString += "O Padrinho não tem jokers!"
+        boxString += "The Godfather has no Jokers!"
 
     return boxString
 
+def constrcutTable(currentPlayer):
+    global numberOfPlayers, playersOrder
 
+    tableString = 'Table: :wrestling:\n'
+
+    for i in range(numberOfPlayers):
+        if playersOrder[i] == currentPlayer:
+            tableString += '(' + str(i+1) + ') **' + playersOrder[i] + '** :briefcase:\n'
+        else:
+            tableString += '(' + str(i+1) + ') ' + playersOrder[i] + '\n'
+    
+    tableString += '\n Godfather: ' + godfather + ' :ring:\n'
 
 @client.event
 async def on_message(message):
@@ -65,14 +78,16 @@ async def on_message(message):
         if (not opened):
             opened = True
             await message.channel.send(
-                'Otários! Para entrarem na sala do Mafia de Cuba escrevam "!mafia join".\n'
-                'Para sair, escrevam "!mafia leave". Para começar, "!mafia start".\n'
-                'Se quiseres ser o padrinho escreve "!mafia godfather".\n'
-                'O nº de jogadores tem de ser entre 5 e 12.'
+                ':dagger: Buenas noches hijos de puta! :dagger:\n\n'
+                ':arrow_right: Use `!mafia join` to join the session.\n'
+                ':arrow_right: Use `!mafia leave` to leave the session.\n'
+                ':arrow_right: Use `!mafia start` to start the game when all players have joined the session.\n'
+                ':arrow_right: Use `!mafia godfather` if you want to be the godfather.\n\n'
+                ':gem: To start the game you need 5 to 12 players in the session.'
             )
         else:
             await message.channel.send(
-                'Estúpido. O jogo já está aberto.'
+                f'{message.author.name} is a Tony Hawking. The game is already opened...'
             )
 
     # Player joining
@@ -82,15 +97,15 @@ async def on_message(message):
             players[message.author.name] = 'TBD'
             playerList = '\n - '.join(players.keys())
             await message.channel.send(
-                f'{message.author.name} juntou-se ao jogo!\nJogadores na sala [{len(players)}]:\n - {playerList}'
+                f'{message.author.name} joined the game! :gun:\nPlayers in the room **[{len(players)}]**:\n - {playerList}'
             )
         elif message.author.name in players.keys():
             await message.channel.send(
-                f'{message.author.name} és um monte de merda. Tá quieto estúpidx!'
+                f'{message.author.name} you are a piece of shit.'
             )
         elif started:
             await message.dm_channel.send(
-                f'Desculpa {message.author.name}, mas o jogo já começou. Espera até terminar e entras no próximo!'
+                f'Sorry {message.author.name}, but the game has already started. Wait until it ends and you can join the next one!'
             )
 
     # Player leaving
@@ -100,7 +115,7 @@ async def on_message(message):
                 players.pop(message.author.name)
                 playerList = '\n - '.join(players.keys())
                 await message.channel.send(
-                    f'{message.author.name} saiu do jogo! Que conas. \nJogadores na sala [{len(players)}]:\n - {playerList}'
+                    f'{message.author.name} left the game! What a pussy.\nPlayers in the room **[{len(players)}]**:\n - {playerList}'
                 )
 
     # Game starting
@@ -108,44 +123,49 @@ async def on_message(message):
         if opened:
             numberOfPlayers = len(players)
             if numberOfPlayers < 5 or numberOfPlayers > 12:
-                await message.channel.send('O nº de jogadores tem de ser entre 5 e 12!')
+                await message.channel.send('The number of players must be between 5 and 12!')
             else:
                 started = True
 
                 if numberOfPlayers == 5:
-                    box = {'loyal':1, 'cop':1, 'diamonds':15}
+                    box = {'loyals':1, 'agents':1, 'diamonds':15}
                 elif numberOfPlayers == 6:
-                    box = {'loyal':1, 'cop':1, 'taxidriver':1, 'diamonds':15}
+                    box = {'loyals':1, 'agents':1, 'taxidrivers':1, 'diamonds':15}
                 elif numberOfPlayers == 7:
-                    box = {'loyal':2, 'cop':1, 'taxidriver':1, 'diamonds':15}
+                    box = {'loyals':2, 'agents':1, 'taxidrivers':1, 'diamonds':15}
                 elif numberOfPlayers == 8:
-                    box = {'loyal':3, 'cop':1, 'taxidriver':1, 'jokers':1, 'diamonds':15}
+                    box = {'loyals':3, 'agents':1, 'taxidrivers':1, 'jokers':1, 'diamonds':15}
                 elif numberOfPlayers == 9:
-                    box = {'loyal':4, 'cop':1, 'taxidriver':1, 'jokers':1, 'diamonds':15}
+                    box = {'loyals':4, 'agents':1, 'taxidrivers':1, 'jokers':1, 'diamonds':15}
                 elif numberOfPlayers == 10:
-                    box = {'loyal':4, 'cop':2, 'taxidriver':1, 'jokers':1, 'diamonds':15}
+                    box = {'loyals':4, 'agents':2, 'taxidrivers':1, 'jokers':1, 'diamonds':15}
                 elif numberOfPlayers == 11:
-                    box = {'loyal':4, 'cop':2, 'taxidriver':2, 'jokers':2, 'diamonds':15}
+                    box = {'loyals':4, 'agents':2, 'taxidrivers':2, 'jokers':2, 'diamonds':15}
                 else:
-                    box = {'loyal':5, 'cop':2, 'taxidriver':2, 'jokers':2, 'diamonds':15}
+                    box = {'loyals':5, 'agents':2, 'taxidrivers':2, 'jokers':2, 'diamonds':15}
 
-                boxString = constructBox()
-                #for player in players.keys():
-                #    if players['player'] != 'godfather':
-                #        playerOrder.append(player)
-                #        random.shuffle(players)
-                await message.channel.send(boxString)
+                for player in players.keys():
+                    if players['player'] != 'godfather':
+                        playersOrder.append(player)
+
+                random.shuffle(playersOrder)
+
+                tableString = constrcutTable(playersOrder[0]):
+
+                boxString = constructBox('start', message.author.name)
+                await message.channel.send(tableString + boxString)
 
         elif (not opened):
             await message.channel.send(
-                'Primeiro é preciso abrir a sala com "!mafia open".\n'
-                'Caso precises de ajuda usa "!mafia help".'
+                'First you need to open a room with "!mafia open".\n'
+                'In case you need help use "!mafia help".'
             )
     
     # Godfather selected
     elif message.content == "!mafia godfather":
         if opened and (not started):
             players[message.author.name] = 'godfather'
-            await message.channel.send(f'{message.author.name} é o Padrinho!')
+            godfather = message.author.name
+            await message.channel.send(f'{message.author.name} is the Godfather! :ring:')
 
 client.run(TOKEN)
