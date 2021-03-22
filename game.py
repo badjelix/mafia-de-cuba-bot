@@ -6,6 +6,12 @@ import re
 import discord
 from dotenv import load_dotenv
 
+
+
+#########################
+# Environment Variables #
+#########################
+
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 GUILD = os.getenv('DISCORD_GUILD')
@@ -15,9 +21,10 @@ guild = ''
 intents = discord.Intents.default()
 intents.members = True
 
+# Connect client to Discord
 client = discord.Client(intents=intents)
 
-
+# Method that runs when client as fully connected to Discord
 @client.event
 async def on_ready():
     global guild, guildChannel
@@ -25,11 +32,14 @@ async def on_ready():
     for channel in guild.channels:
         if channel.name == CHANNEL:
             guildChannel = channel
-
     print('Mafia de Cuba bot is up.')
 
 
-# Global game variables
+
+#########################
+# Game Global Variables #
+#########################
+
 opened = False
 started = False
 godfatherSelect = False
@@ -44,6 +54,12 @@ currentPlayer = ''
 currentPlayerId = -1
 
 
+
+#####################
+# Auxiliary Methods #
+#####################
+
+# Constructs Box string given a context and a player name
 def constructBox(context, name):
     global box, numberOfPlayers
 
@@ -56,6 +72,7 @@ def constructBox(context, name):
     elif context == 'play:':  # Gui - contexto para a caixa qd volta para o godfather
         boxString += f'Godfather {name}! Here\'s your box but someone has stolen your diamonds!\n'
         boxString += 'Get revenge and retrieve them back by using `!mafia kill <traitor name>`.'
+
     boxString += '----------------- \n'
     boxString += f'Loyals - {box["loyals"]} \n'
     boxString += f'Agents - {box["agents"]} \n'
@@ -74,6 +91,7 @@ def constructBox(context, name):
     return boxString
 
 
+# Constructs Table string given the current player name
 def constructTable(currentPlayer):
     global numberOfPlayers, playersOrder, godfather
 
@@ -93,6 +111,7 @@ def constructTable(currentPlayer):
     return tableString
 
 
+# Constructs Options string possibly with the Street Urchin option
 def constructOptions(urchin):
     global box
     optionsString = ''
@@ -111,6 +130,7 @@ def constructOptions(urchin):
     return optionsString
 
 
+# Checks if player that receives the box should have the option of being a Street Urchin
 def checkStreetUrchin():
     global box
 
@@ -133,12 +153,17 @@ def checkStreetUrchin():
 
 
 
+#####################
+# Game Core Methods #
+#####################
+
+# Method that handles the different messages the client receives from Discord
 @client.event
 async def on_message(message):
     global guild, guildChannel, opened, started, players, currentPlayer, currentPlayerId, numberOfPlayers, box, godfather, godfatherSelect, godfatherKill
 
 
-    # Opening game session
+    # OPEN GAME SESSION
     if message.content == '!mafia open':
         if not opened:
             opened = True
@@ -146,46 +171,44 @@ async def on_message(message):
                 ':dagger: Buenas noches hijos de puta! :dagger:\n\n'
                 ':arrow_right: Use `!mafia join` to join the session.\n'
                 ':arrow_right: Use `!mafia leave` to leave the session.\n'
-                ':arrow_right: Use `!mafia start` to start the game when all players have joined the session.\n'
-                ':arrow_right: Use `!mafia godfather` if you want to be the godfather.\n\n'
+                ':arrow_right: Use `!mafia godfather` if you want to be the godfather.\n'
+                ':arrow_right: Use `!mafia start` to start the game when all players have joined the session.\n\n'
                 ':gem: To start the game you need 5 to 12 players in the session.'
             )
         else:
-            await guildChannel.send(
-                f'{message.author.name} is a Tony Hawking. The game is already opened...'
-            )
+            await guildChannel.send(f'{message.author.name} is a Tony Hawking. The game room is already opened...')
 
 
-    # Player joining
+    # PLAYER JOINS
     elif message.content == '!mafia join':
         if opened and (not started) and (message.author.name not in players.keys()):
             players[message.author.name] = 'TBD'
             playerList = '\n - '.join(players.keys())
-            await guildChannel.send(
-                f'{message.author.name} joined the game! :gun:\nPlayers in the room **[{len(players)}]**:\n - {playerList}'
+            await guildChannel.send(f'{message.author.name} joined the game! :gun:\n' +
+                                    'Players in the room **[{len(players)}]**:\n - {playerList}'
             )
         elif message.author.name in players.keys():
-            await guildChannel.send(
-                f'{message.author.name} is a Tony Hawking. You are already in the room...'
+            await guildChannel.send(f'{message.author.name}, you are a Tony Hawking.' +
+                                    'You are already in the room...'
             )
         elif started:
-            await guildChannel.send(
-                f'Sorry {message.author.name}, but the game has already started. Wait until it ends and you can join the next one!'
+            await guildChannel.send(f'Sorry {message.author.name}, but the game has already started.' +
+                                    'Wait until it ends and you can join the next one!'
             )
 
 
-    # Player leaving
+    # PLAYER LEAVES
     elif message.content == '!mafia leave':
         if opened and (not started):
             if message.author.name in players.keys():
                 players.pop(message.author.name)
                 playerList = '\n - '.join(players.keys())
-                await guildChannel.send(
-                    f'{message.author.name} left the game! What a pussy.\nPlayers in the room **[{len(players)}]**:\n - {playerList}'
+                await guildChannel.send(f'{message.author.name} left the game! What a pussy.\n' +
+                                        'Players in the room **[{len(players)}]**:\n - {playerList}'
                 )
 
 
-    # Game starting
+    # GAMES STARTS
     elif message.content == '!mafia start':
         if godfather == '':
             await guildChannel.send('Select the Godfather before starting the game.')
@@ -233,8 +256,8 @@ async def on_message(message):
 
                 await godfatherMember.create_dm()
                 await godfatherMember.dm_channel.send(f'Godfather {godfatherMember.name}, ' +
-                                                        'please select how many diamonds you want to remove (from 0-5) from the box. ' +
-                                                        'Use the message `!mafia remove <number of diamonds>`\n')
+                                                    'please select how many diamonds you want to remove (from 0-5) from the box. ' +
+                                                    'Use the message `!mafia remove <number of diamonds>`\n')
         elif not opened:
             await guildChannel.send(
                 'First you need to open a room with "!mafia open".\n'
@@ -242,7 +265,7 @@ async def on_message(message):
             )
     
 
-    # Godfather selected
+    # SOMEONE SELECTS HIMSELF AS GODFATHER
     elif message.content == '!mafia godfather':
         if opened and (not started):
             players[message.author.name] = 'godfather'
@@ -250,7 +273,7 @@ async def on_message(message):
             await guildChannel.send(f'{message.author.name} is the Godfather! :ring:')
 
 
-    # Godfather removes diamonds from box
+    # GODFATHER REMOVES DIAMONDS FROM THE BOX
     elif message.content[:13] == '!mafia remove':
 
         messageSplit = message.content.split()
@@ -282,7 +305,7 @@ async def on_message(message):
             await message.channel.send('You piece of shit.')
 
 
-    # Someone removes loyal
+    # SOMEONE REMOVES LOYAL
     elif message.content == '!mafia loyal':
         if started and (not godfatherSelect):
             if box["loyals"] > 0:
@@ -293,10 +316,10 @@ async def on_message(message):
                 currentPlayerId += 1
                 if currentPlayerId == numberOfPlayers - 1:  # Gui - caixa passou por toda a gente
                     godfatherKill = True
-                    await guildChannel.send('**The box has returned to the Godfather!**\n\n' + constructTable(godfather)
-                                            + f'\n\n Godfather {godfather}! Someone has stolen your precious diamonds! :ring: \n'
-                                              ':dagger: Hijos de puta traidores! :dagger:\n'
-                                              'Find out who and "dispose" of them!')
+                    await guildChannel.send('**The box has returned to the Godfather!**\n\n' + constructTable(godfather) +
+                                            f'\n\n Godfather {godfather}! Someone has stolen your precious diamonds! :ring: \n' +
+                                            ':dagger: Hijos de puta, traidores! :dagger:\n' +
+                                            'Find out who and "dispose" of them!')
                 else:
                     currentPlayer = playersOrder[currentPlayerId]
                     message += constructTable(currentPlayer)
@@ -316,7 +339,7 @@ async def on_message(message):
             message.channel.send(f'Shut up {message.author.name}.\n')
 
 
-    # Someone removes agent
+    # SOMEONE REMOVES AGENT
     elif message.content == '!mafia agent':
         if started and (not godfatherSelect):
             if box["agents"] > 0:
@@ -349,7 +372,7 @@ async def on_message(message):
             message.channel.send(f'Shut up {message.author.name}.\n')
 
 
-    # Someone removes taxidriver
+    # SOMEONE REMOVES TAXIDRIVER
     elif message.content == '!mafia taxidriver':
         if started and (not godfatherSelect):
             if box["taxidrivers"] > 0:
@@ -383,7 +406,7 @@ async def on_message(message):
             message.channel.send(f'Shut up {message.author.name}.\n')
 
 
-    # Someone removes diamonds
+    # SOMEONE REMOVES DIAMONDS
     elif message.content[:15] == '!mafia diamonds':
         if started and (not godfatherSelect):
             if box["taxidrivers"] > 0:
@@ -416,7 +439,7 @@ async def on_message(message):
             message.channel.send(f'Shut up {message.author.name}.\n')
 
 
-    # Someone picks street urchin
+    # SOMEONE PICKS STREET URCHIN
     elif message.content == '!mafia street urchin':
         if started and (not godfatherSelect):
             if checkStreetUrchin():
@@ -446,6 +469,18 @@ async def on_message(message):
                 message.channel.send('Duh.\n')
         elif started and (not godfatherSelect) and (message.author.name != currentPlayer):
             message.channel.send(f'Shut up {message.author.name}.\n')
+    
+
+    # SOMEONE REMOVES DIAMONDS
+    elif message.content == "!mafia help":
+        if opened and (not started):
+            await message.channel.send(
+                ':arrow_right: Use `!mafia join` to join the session.\n'
+                ':arrow_right: Use `!mafia leave` to leave the session.\n'
+                ':arrow_right: Use `!mafia godfather` if you want to be the godfather.\n'
+                ':arrow_right: Use `!mafia start` to start the game when all players have joined the session.\n\n'
+                ':gem: To start the game you need 5 to 12 players in the session.'
+            )
 
 
 client.run(TOKEN)
