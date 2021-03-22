@@ -198,8 +198,7 @@ def getMember(name):
 # Method that handles the different messages the client receives from Discord
 @client.event
 async def on_message(message):
-    global guild, guildChannel, opened, started, players, currentPlayer, currentPlayerId, numberOfPlayers, box,
-    godfather, godfatherRemoveDiamonds, godfatherAccuse, boxPassing
+    global guild, guildChannel, opened, started, players, currentPlayer, currentPlayerId, numberOfPlayers, box, godfather, godfatherRemoveDiamonds, godfatherAccuse, boxPassing
 
 
     # OPEN GAME SESSION
