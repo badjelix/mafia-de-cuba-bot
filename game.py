@@ -151,7 +151,7 @@ def checkStreetUrchin():
 
 
 # Passes the box to the next player
-def passTheBoxToNextPlayer():
+async def passTheBoxToNextPlayer():
     global currentPlayerId, currentPlayer, playersOrder, guildChannel
 
     currentPlayerId += 1
@@ -166,7 +166,7 @@ def passTheBoxToNextPlayer():
 
 
 # Passses the box to the Godfather
-def passTheBoxToGodfather():
+async def passTheBoxToGodfather():
     global guildChannel, godfather
 
     await guildChannel.send('**The box has returned to the Godfather!**\n\n' + constructTable(godfather) +
@@ -281,7 +281,7 @@ async def on_message(message):
 
                 await guildChannel.send(tableString + boxString)
 
-                godfatherMember = getMember(godfatherMember)
+                godfatherMember = getMember(godfather)
 
                 godfatherRemoveDiamonds = True
 
