@@ -347,6 +347,7 @@ async def on_message(message):
             matchesNumber = bool(re.match('^[0-9]+$', messageSplit[2]))
 
             if matchesWord:
+                # Player takes loyal
                 if messageSplit[2] == 'loyal':
                     if box["loyals"] > 0:
                         box["loyals"] = box["loyals"] - 1
@@ -358,6 +359,7 @@ async def on_message(message):
                     else:
                         message.channel.send('Duh.\n')
                 
+                # Player takes agent
                 elif messageSplit[2] == 'agent':
                     if box["agents"] > 0:
                         box["agents"] = box["agents"] - 1
@@ -369,6 +371,7 @@ async def on_message(message):
                     else:
                         message.channel.send('Duh.\n')
 
+                # Player takes taxidriver
                 elif messageSplit[2] == 'taxidriver':
                     if box["taxidrivers"] > 0:
                         box["taxidrivers"] = box["taxidrivers"] - 1
@@ -380,6 +383,7 @@ async def on_message(message):
                     else:
                         message.channel.send('Duh.\n')
 
+                # Player takes street urchin
                 elif messageSplit[2] == 'street' and messageSplit[3] == 'urchin':
                     if checkStreetUrchin():
                         players[message.author.name] = 'street urchin'
@@ -388,6 +392,7 @@ async def on_message(message):
                         else:
                             passTheBoxToNextPlayer()
             
+            # Player takes diamonds
             elif matchesNumber:
                 if int(messageSplit[2]) >= 0:
                     matchesWord = bool(re.match('^[a-z]+$', messageSplit[3]))
