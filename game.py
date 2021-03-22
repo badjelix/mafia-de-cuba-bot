@@ -42,11 +42,13 @@ async def on_ready():
 opened = False
 started = False
 godfatherRemoveDiamonds = False
+bagDecision = False
 boxPassing = False
 godfatherAccuse = False
 numberOfPlayers = 0
 players = {}
 box = {}
+bag = ''
 playersOrder = []
 godfather = ''
 streetUrchin = False
@@ -108,6 +110,20 @@ def constructTable(currentPlayer):
         tableString += '\n **Godfather**: ' + godfather + ' :ring:\n\n'
 
     return tableString
+
+
+# Constructs Bag Options string
+def constructBagOptions():
+    global box
+    bagOptionsString = 'You\'re the first player with the box! You get to hide a piece in the bag, or not, you choose!'\
+                       ':arrow_right: Use `!mafia bag loyal` if you want to hide a Loyal.\n' \
+                       ':arrow_right: Use `!mafia bag agent` if you want to hide an Agent.\n'
+
+    if 'taxidrivers' in box:
+        bagOptionsString += ':arrow_right: Use `!mafia bag taxidriver` if you want to hide a Taxidriver.\n'
+    bagOptionsString += ':arrow_right: Use `!mafia bag none` if you don\'t want to hide a character.\n'
+
+    return bagOptionsString
 
 
 # Constructs Options string possibly with the Street Urchin option
@@ -198,7 +214,8 @@ def getMember(name):
 # Method that handles the different messages the client receives from Discord
 @client.event
 async def on_message(message):
-    global guild, guildChannel, opened, started, players, currentPlayer, currentPlayerId, numberOfPlayers, box, godfather, godfatherRemoveDiamonds, godfatherAccuse, boxPassing
+    global guild, guildChannel, opened, started, players, currentPlayer, currentPlayerId, numberOfPlayers, box, bag, \
+           godfather, godfatherRemoveDiamonds, bagDecision, boxPassing, godfatherAccuse
 
 
     # OPEN GAME SESSION
@@ -320,7 +337,7 @@ async def on_message(message):
             box["diamonds"] = box["diamonds"] - int(messageSplit[2])
 
             godfatherRemoveDiamonds = False
-            boxPassing = True
+            bagDecision = True
             currentPlayer = playersOrder[0]
             currentPlayerId = 0
 
@@ -329,13 +346,80 @@ async def on_message(message):
             playerMember = getMember(currentPlayer)
 
             await playerMember.create_dm()
-            await playerMember.dm_channel.send(constructBox('pass', currentPlayer) + constructOptions(False))
+            await playerMember.dm_channel.send(constructBox('pass', currentPlayer) + constructBagOptions())
 
         elif matches and godfatherRemoveDiamonds and (message.author.name == godfather) and (int(messageSplit[2]) > 5 or int(messageSplit[2]) < 0):
             await message.channel.send('You can only remove from 0 to 5 diamonds.')
         
         elif not matches:
             await message.channel.send('You piece of shit.')
+
+
+    # FIRST PLAYER HIDES A PIECE IN THE BAG
+    elif message.content[:10] == '!mafia bag':
+
+        if bagDecision and (message.author.name == currentPlayer):
+
+            messageSplit = message.content.split()
+
+            # Player bags loyal
+            if messageSplit[2] == 'loyal':
+                if box["loyals"] > 0:
+                    box["loyals"] = box["loyals"] - 1
+                    bag = 'loyal'
+                    bagDecision = False
+                    boxPassing = True
+
+                    playerMember = getMember(currentPlayer)
+
+                    await playerMember.create_dm()
+                    await playerMember.dm_channel.send(constructBox('pass', currentPlayer) + constructOptions(False))
+
+                else:
+                    message.channel.send('Duh.\n')
+
+            # Player bags agent
+            elif messageSplit[2] == 'agent':
+                if box["agents"] > 0:
+                    box["agents"] = box["agents"] - 1
+                    bag = 'agent'
+                    bagDecision = False
+                    boxPassing = True
+
+                    playerMember = getMember(currentPlayer)
+
+                    await playerMember.create_dm()
+                    await playerMember.dm_channel.send(constructBox('pass', currentPlayer) + constructOptions(False))
+
+                else:
+                    message.channel.send('Duh.\n')
+
+            # Player bags taxidriver
+            elif messageSplit[2] == 'taxidriver':
+                if box["taxidrivers"] > 0:
+                    box["taxidrivers"] = box["taxidrivers"] - 1
+                    bag = 'taxidriver'
+                    bagDecision = False
+                    boxPassing = True
+
+                    playerMember = getMember(currentPlayer)
+
+                    await playerMember.create_dm()
+                    await playerMember.dm_channel.send(constructBox('pass', currentPlayer) + constructOptions(False))
+
+                else:
+                    message.channel.send('Duh.\n')
+
+            # Player bags nothing
+            elif messageSplit[2] == 'none':
+                bag = 'empty'
+                bagDecision = False
+                boxPassing = True
+
+                playerMember = getMember(currentPlayer)
+
+                await playerMember.create_dm()
+                await playerMember.dm_channel.send(constructOptions(False))
 
 
     # SOMEONE TAKES SOMETHING OUT OF THE BOX
@@ -396,18 +480,16 @@ async def on_message(message):
             # Player takes diamonds
             elif matchesNumber:
                 if int(messageSplit[2]) >= 0:
-                    matchesWord = bool(re.match('^[a-z]+$', messageSplit[3]))
-                    if matchesWord:
-                        if messageSplit[3] == 'diamonds':
-                            if box["diamonds"] >= int(messageSplit[2]):
-                                box["diamonds"] = box["diamonds"] - int(messageSplit[2])
-                                players[message.author.name] = 'thief - ' + messageSplit[2]
-                                if currentPlayerId == numberOfPlayers - 2:
-                                    passTheBoxToGodfather()
-                                else:
-                                    passTheBoxToNextPlayer()
+                    if messageSplit[3] == 'diamonds':
+                        if box["diamonds"] >= int(messageSplit[2]):
+                            box["diamonds"] = box["diamonds"] - int(messageSplit[2])
+                            players[message.author.name] = 'thief ' + messageSplit[2]
+                            if currentPlayerId == numberOfPlayers - 2:
+                                passTheBoxToGodfather()
                             else:
-                                message.channel.send('You are taking too much diamonds')
+                                passTheBoxToNextPlayer()
+                        else:
+                            message.channel.send('You are taking too much diamonds')
                 else:
                     message.channel.send(f'Stop being retardation, {message.author.name}.')
         
