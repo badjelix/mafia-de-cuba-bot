@@ -1,6 +1,7 @@
 # game.py
 import os
 import random
+import re
 
 import discord
 from dotenv import load_dotenv
@@ -37,6 +38,9 @@ players = {}
 box = {}
 playersOrder = []
 godfather = ''
+streetUrchin = False
+currentPlayer = ''
+currentPlayerId = -1
 
 
 def constructBox(context, name):
@@ -47,7 +51,7 @@ def constructBox(context, name):
     if context == 'start':
         boxString += '**Box:**\n\n'
     elif context == 'pass':
-        boxString += f'Take the box {name}. Don\' show it to anyone or Tony Hawkings will kill you.\n\n'
+        boxString += f'Take the box {name}. Don\'t show it to anyone or Tony Hawkings will kill you.\n\n'
     boxString += '----------------- \n'
     boxString += f'Loyals - {box["loyals"]} \n'
     boxString += f'Agents - {box["agents"]} \n'
@@ -61,7 +65,7 @@ def constructBox(context, name):
     if 'jokers' in box:
         boxString += f'The Godfather has {box["jokers"]} Jokers. \n\n'
     else:
-        boxString += "The Godfather has no Jokers!"
+        boxString += "The Godfather has no Jokers!\n"
 
     return boxString
 
@@ -86,9 +90,49 @@ def constructTable(currentPlayer):
     return tableString
 
 
+def constructOptions(urchin):
+    global box
+    optionsString = ''
+
+    if 'loyals' in box:
+        optionsString += ':arrow_right: Use `!mafia loyal` if you want to be a Loyal.\n'
+    if 'agents' in box:
+        optionsString += ':arrow_right: Use `!mafia agent` if you want to be an Agent.\n'
+    if 'taxidrivers' in box:
+        optionsString += ':arrow_right: Use `!mafia taxidriver` if you want to be a Taxidriver.\n'
+    if 'diamonds' in box:
+        optionsString += ':arrow_right: Use `!mafia steal <number of diamonds>` to be a thief and remove <number of diamonds> diamonds.\n'
+    if urchin:
+        optionsString += ':arrow_right: Use `!mafia street urchin` to be a street urchin.\n'
+
+    return optionsString
+
+
+def checkStreetUrchin():
+    global box
+
+    numberOfElements = 0
+    streetUrchin = False
+
+    if 'loyals' in box:
+        numberOfElements += box["loyals"]
+    if 'agents' in box:
+        numberOfElements += box["agents"]
+    if 'taxidrivers' in box:
+        numberOfElements += box["taxidrivers"]
+    if 'diamonds' in box:
+        numberOfElements += box["diamonds"]
+
+    if (numberOfElements == 0) or (currentPlayerId == numberOfPlayers - 2):
+        streetUrchin = True
+
+    return streetUrchin
+
+
+
 @client.event
 async def on_message(message):
-    global guild, guildChannel, opened, started, players, numberOfPlayers, box, godfather, godfatherSelect
+    global guild, guildChannel, opened, started, players, currentPlayer, currentPlayerId, numberOfPlayers, box, godfather, godfatherSelect
 
 
     # Opening game session
@@ -178,7 +222,6 @@ async def on_message(message):
 
                 await guildChannel.send(tableString + boxString)
 
-                godfatherMember = ''
                 for member in guild.members:
                     if member.name == godfather:
                         godfatherMember = member
@@ -206,12 +249,144 @@ async def on_message(message):
 
     # Godfather removes diamonds from box
     elif message.content[:13] == '!mafia remove':
-        if started and godfatherSelect and (message.author.name == godfather) and (int(message.content[14]) <= 5 and int(message.content[14]) >= 0):
-            box["diamonds"] = box["diamonds"] - int(message.content[14])
-            await guildChannel.send('**The Godfather passed the box!**\n\n' + constructTable(playersOrder[0]))
+
+        messageSplit = message.content.split()
+
+        matches = bool(re.match("^[-+]?\d+$", messageSplit[2]))
+
+        if matches and started and godfatherSelect and (message.author.name == godfather) and (int(messageSplit[2]) <= 5 and int(messageSplit[2]) >= 0):
+            box["diamonds"] = box["diamonds"] - int(messageSplit[2])
+
             godfatherSelect = False
-        elif started and godfatherSelect and (message.author.name == godfather) and (int(message.content[14]) > 5 or int(message.content[14]) < 0):
+            currentPlayer = playersOrder[0]
+            currentPlayerId = 0
+
+
+            await guildChannel.send('**The Godfather passed the box!**\n\n' + constructTable(currentPlayer))
+
+            playerMember = ''
+            for member in guild.members:
+                if member.name == currentPlayer:
+                    playerMember = member
+
+            await playerMember.create_dm()
+            await playerMember.dm_channel.send(constructBox('pass', currentPlayer) + constructOptions(False))
+
+        elif matches and started and godfatherSelect and (message.author.name == godfather) and (int(messageSplit[2]) > 5 or int(messageSplit[2]) < 0):
             await message.channel.send('You can only remove from 0 to 5 diamonds.')
+        
+        elif not matches:
+            await message.channel.send('You piece of shit.')
+
+
+    # Someone removes loyal
+    elif message.content == '!mafia loyal':
+        if started and (not godfatherSelect):
+            if box["loyals"] > 0:
+                box["loyals"] = box["loyals"] - 1
+                players[message.author.name] = 'loyal'
+
+                message = f'**{currentPlayer} passed the box!**\n\n'
+                currentPlayerId += 1
+                currentPlayer = playersOrder[currentPlayerId]
+                message += constructTable(currentPlayer)
+                await guildChannel.send(message)
+
+                playerMember = ''
+                for member in guild.members:
+                    if member.name == currentPlayer:
+                        playerMember = member
+
+                await playerMember.create_dm()
+                await playerMember.dm_channel.send(constructBox('pass', currentPlayer) + constructOptions(checkStreetUrchin()))
+
+            else:
+                message.channel.send('Duh.\n')
+        elif started and (not godfatherSelect) and (message.author.name != currentPlayer):
+            message.channel.send(f'Shut up {message.author.name}.\n')
+
+
+    # Someone removes agent
+    elif message.content == '!mafia agent':
+        if started and (not godfatherSelect):
+            if box["agents"] > 0:
+                box["agents"] = box["agents"] - 1
+                players[message.author.name] = 'agent'
+
+                message = f'**{currentPlayer} passed the box!**\n\n'
+                currentPlayerId += 1
+                currentPlayer = playersOrder[currentPlayerId]
+                message += constructTable(currentPlayer)
+                await guildChannel.send(message)
+
+                playerMember = ''
+                for member in guild.members:
+                    if member.name == currentPlayer:
+                        playerMember = member
+
+                await playerMember.create_dm()
+                await playerMember.dm_channel.send(constructBox('pass', currentPlayer) + constructOptions(checkStreetUrchin()))
+
+            else:
+                message.channel.send('Duh.\n')
+        elif started and (not godfatherSelect) and (message.author.name != currentPlayer):
+            message.channel.send(f'Shut up {message.author.name}.\n')
+
+
+    # Someone removes taxidriver
+    elif message.content == '!mafia taxidriver':
+        if started and (not godfatherSelect):
+            if box["taxidrivers"] > 0:
+                box["taxidrivers"] = box["taxidrivers"] - 1
+                players[message.author.name] = 'taxidriver'
+
+                message = f'**{currentPlayer} passed the box!**\n\n'
+                currentPlayerId += 1
+                currentPlayer = playersOrder[currentPlayerId]
+                message += constructTable(currentPlayer)
+                await guildChannel.send(message)
+
+                playerMember = ''
+                for member in guild.members:
+                    if member.name == currentPlayer:
+                        playerMember = member
+
+                await playerMember.create_dm()
+                await playerMember.dm_channel.send(constructBox('pass', currentPlayer) + constructOptions(checkStreetUrchin()))
+
+            else:
+                message.channel.send('Duh.\n')
+        elif started and (not godfatherSelect) and (message.author.name != currentPlayer):
+            message.channel.send(f'Shut up {message.author.name}.\n')
+
+
+    # Someone removes diamonds
+    elif message.content[:15] == '!mafia diamonds':
+        if started and (not godfatherSelect):
+            if box["taxidrivers"] > 0:
+                box["taxidrivers"] = box["taxidrivers"] - 1
+                players[message.author.name] = 'thief'
+
+                message = f'**{currentPlayer} passed the box!**\n\n'
+                currentPlayerId += 1
+                currentPlayer = playersOrder[currentPlayerId]
+                message += constructTable(currentPlayer)
+                await guildChannel.send(message)
+
+                playerMember = ''
+                for member in guild.members:
+                    if member.name == currentPlayer:
+                        playerMember = member
+
+                await playerMember.create_dm()
+                await playerMember.dm_channel.send(constructBox('pass', currentPlayer) + constructOptions(checkStreetUrchin()))
+
+            else:
+                message.channel.send('Duh.\n')
+        elif started and (not godfatherSelect) and (message.author.name != currentPlayer):
+            message.channel.send(f'Shut up {message.author.name}.\n')
+
+
 
 
 client.run(TOKEN)
