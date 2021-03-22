@@ -44,6 +44,7 @@ opened = False
 started = False
 godfatherSelect = False
 godfatherKill = False
+godfatherMember = ''
 numberOfPlayers = 0
 players = {}
 box = {}
@@ -69,10 +70,9 @@ def constructBox(context, name):
         boxString += '**Box:**\n\n'
     elif context == 'pass':
         boxString += f'Take the box {name}. Don\'t show it to anyone or Tony Hawkings will kill you.\n\n'
-    elif context == 'play:':  # Gui - contexto para a caixa qd volta para o godfather
+    elif context == 'guess:':  # Gui - contexto para a caixa qd volta para o godfather
         boxString += f'Godfather {name}! Here\'s your box but someone has stolen your diamonds!\n'
-        boxString += 'Get revenge and retrieve them back by using `!mafia kill <traitor name>`.'
-
+        boxString += 'Get revenge and retrieve them back using `!mafia kill <traitor name>`.'
     boxString += '----------------- \n'
     boxString += f'Loyals - {box["loyals"]} \n'
     boxString += f'Agents - {box["agents"]} \n'
@@ -160,7 +160,7 @@ def checkStreetUrchin():
 # Method that handles the different messages the client receives from Discord
 @client.event
 async def on_message(message):
-    global guild, guildChannel, opened, started, players, currentPlayer, currentPlayerId, numberOfPlayers, box, godfather, godfatherSelect, godfatherKill
+    global guild, guildChannel, opened, started, players, currentPlayer, currentPlayerId, numberOfPlayers, box, godfather, godfatherSelect, godfatherKill, godfatherMember
 
 
     # OPEN GAME SESSION
@@ -317,9 +317,13 @@ async def on_message(message):
                 if currentPlayerId == numberOfPlayers - 1:  # Gui - caixa passou por toda a gente
                     godfatherKill = True
                     await guildChannel.send('**The box has returned to the Godfather!**\n\n' + constructTable(godfather) +
-                                            f'\n\n Godfather {godfather}! Someone has stolen your precious diamonds! :ring: \n' +
+                                            f'\n\n Godfather {godfather}! Someone has stolen your precious diamonds! :ring:\n' +
                                             ':dagger: Hijos de puta, traidores! :dagger:\n' +
                                             'Find out who and "dispose" of them!')
+
+                    await godfatherMember.create_dm()
+                    await godfatherMember.dm_channel.send(constructBox('guess', godfather))
+
                 else:
                     currentPlayer = playersOrder[currentPlayerId]
                     message += constructTable(currentPlayer)
@@ -348,11 +352,16 @@ async def on_message(message):
 
                 message = f'**{currentPlayer} passed the box!**\n\n'
                 currentPlayerId += 1
-                if currentPlayerId == numberOfPlayers - 1:  # Gui 6 linhas
+                if currentPlayerId == numberOfPlayers - 1:
+                    godfatherKill = True
                     await guildChannel.send('**The box has returned to the Godfather!**\n\n' + constructTable(godfather)
-                                            + '\n\n Godfather! Someone has stolen your precious diamonds! :ring: \n'
+                                            + f'\n\n Godfather {godfather}! Someone has stolen your precious diamonds! :ring: \n'
                                               ':dagger: Hijos de puta traidores! :dagger:\n'
-                                              'Find out who and "dispose" of them using `!mafia kill <player name>`')
+                                              'Find out who and "dispose" of them!')
+
+                    await godfatherMember.create_dm()
+                    await godfatherMember.dm_channel.send(constructBox('guess', godfather))
+
                 else:
                     currentPlayer = playersOrder[currentPlayerId]
                     message += constructTable(currentPlayer)
@@ -381,11 +390,15 @@ async def on_message(message):
 
                 message = f'**{currentPlayer} passed the box!**\n\n'
                 currentPlayerId += 1
-                if currentPlayerId == numberOfPlayers - 1:  # Gui -
+                if currentPlayerId == numberOfPlayers - 1:
+                    godfatherKill = True
                     await guildChannel.send('**The box has returned to the Godfather!**\n\n' + constructTable(godfather)
-                                            + '\n\n Godfather! Someone has stolen your precious diamonds! :ring: \n'
+                                            + f'\n\n Godfather {godfather}! Someone has stolen your precious diamonds! :ring: \n'
                                               ':dagger: Hijos de puta traidores! :dagger:\n'
-                                              'Find out who and "dispose" of them using `!mafia kill <player name>`')
+                                              'Find out who and "dispose" of them!')
+
+                    await godfatherMember.create_dm()
+                    await godfatherMember.dm_channel.send(constructBox('guess', godfather))
 
                 else:
                     currentPlayer = playersOrder[currentPlayerId]
@@ -415,11 +428,16 @@ async def on_message(message):
 
                 message = f'**{currentPlayer} passed the box!**\n\n'
                 currentPlayerId += 1
-                if currentPlayerId == numberOfPlayers - 1:  # Gui 6 linhas
+                if currentPlayerId == numberOfPlayers - 1:
+                    godfatherKill = True
                     await guildChannel.send('**The box has returned to the Godfather!**\n\n' + constructTable(godfather)
-                                            + '\n\n Godfather! Someone has stolen your precious diamonds! :ring: \n'
+                                            + f'\n\n Godfather {godfather}! Someone has stolen your precious diamonds! :ring: \n'
                                               ':dagger: Hijos de puta traidores! :dagger:\n'
-                                              'Find out who and "dispose" of them using `!mafia kill <player name>`')
+                                              'Find out who and "dispose" of them!')
+
+                    await godfatherMember.create_dm()
+                    await godfatherMember.dm_channel.send(constructBox('guess', godfather))
+
                 else:
                     currentPlayer = playersOrder[currentPlayerId]
                     message += constructTable(currentPlayer)
@@ -447,11 +465,16 @@ async def on_message(message):
 
                 message = f'**{currentPlayer} passed the box!**\n\n'
                 currentPlayerId += 1
-                if currentPlayerId == numberOfPlayers - 1:  # Gui 6 linhas
+                if currentPlayerId == numberOfPlayers - 1:
+                    godfatherKill = True
                     await guildChannel.send('**The box has returned to the Godfather!**\n\n' + constructTable(godfather)
-                                            + '\n\n Godfather! Someone has stolen your precious diamonds! :ring: \n'
+                                            + f'\n\n Godfather {godfather}! Someone has stolen your precious diamonds! :ring: \n'
                                               ':dagger: Hijos de puta traidores! :dagger:\n'
-                                              'Find out who and "dispose" of them using `!mafia kill <player name>`')
+                                              'Find out who and "dispose" of them!')
+
+                    await godfatherMember.create_dm()
+                    await godfatherMember.dm_channel.send(constructBox('guess', godfather))
+
                 else:
                     currentPlayer = playersOrder[currentPlayerId]
                     message += constructTable(currentPlayer)
@@ -482,5 +505,6 @@ async def on_message(message):
                 ':gem: To start the game you need 5 to 12 players in the session.'
             )
 
+    elif message.content[:11] == '!mafia kill':
 
 client.run(TOKEN)
