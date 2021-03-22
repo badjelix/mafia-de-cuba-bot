@@ -198,7 +198,8 @@ def getMember(name):
 # Method that handles the different messages the client receives from Discord
 @client.event
 async def on_message(message):
-    global guild, guildChannel, opened, started, players, currentPlayer, currentPlayerId, numberOfPlayers, box, godfather, godfatherRemoveDiamonds, godfatherAccuse
+    global guild, guildChannel, opened, started, players, currentPlayer, currentPlayerId, numberOfPlayers, box,
+    godfather, godfatherRemoveDiamonds, godfatherAccuse, boxPassing
 
 
     # OPEN GAME SESSION
@@ -210,7 +211,8 @@ async def on_message(message):
                 ':arrow_right: Use `!mafia join` to join the session.\n'
                 ':arrow_right: Use `!mafia leave` to leave the session.\n'
                 ':arrow_right: Use `!mafia godfather` if you want to be the godfather.\n'
-                ':arrow_right: Use `!mafia start` to start the game when all players have joined the session.\n\n'
+                ':arrow_right: Use `!mafia start` to start the game when all players have joined the session.\n'
+                ':arrow_right: Use `!mafia help` if you are lost.\n\n'
                 ':gem: To start the game you need 5 to 12 players in the session.'
             )
         else:
@@ -426,7 +428,8 @@ async def on_message(message):
                 ':arrow_right: Use `!mafia join` to join the session.\n'
                 ':arrow_right: Use `!mafia leave` to leave the session.\n'
                 ':arrow_right: Use `!mafia godfather` if you want to be the godfather.\n'
-                ':arrow_right: Use `!mafia start` to start the game when all players have joined the session.\n\n'
+                ':arrow_right: Use `!mafia start` to start the game when all players have joined the session.\n'
+                ':arrow_right: Use `!mafia help` if you are lost.\n\n'
                 ':gem: To start the game you need 5 to 12 players in the session.'
             )
 
