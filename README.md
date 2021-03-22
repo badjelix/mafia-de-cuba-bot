@@ -9,7 +9,7 @@
 git pull
 ```
 
-#### Como sacar do repositorio:
+#### Como meter no repositorio:
 
 ```bash
 git add <[nomes dos ficheiros] ou .>
