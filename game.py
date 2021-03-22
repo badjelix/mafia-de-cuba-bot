@@ -33,6 +33,7 @@ async def on_ready():
 opened = False
 started = False
 godfatherSelect = False
+godfatherKill = False
 numberOfPlayers = 0
 players = {}
 box = {}
@@ -52,6 +53,9 @@ def constructBox(context, name):
         boxString += '**Box:**\n\n'
     elif context == 'pass':
         boxString += f'Take the box {name}. Don\'t show it to anyone or Tony Hawkings will kill you.\n\n'
+    elif context == 'play:':  # Gui - contexto para a caixa qd volta para o godfather
+        boxString += f'Godfather {name}! Here\'s your box but someone has stolen your diamonds!\n'
+        boxString += 'Get revenge and retrieve them back by using `!mafia kill <traitor name>`.'
     boxString += '----------------- \n'
     boxString += f'Loyals - {box["loyals"]} \n'
     boxString += f'Agents - {box["agents"]} \n'
@@ -61,14 +65,13 @@ def constructBox(context, name):
 
     boxString += f'Diamonds - {box["diamonds"]} \n'
     boxString += '----------------- \n\n'
-
+    # se calhar por so os jokers se o context for start
     if 'jokers' in box:
         boxString += f'The Godfather has {box["jokers"]} Jokers. \n\n'
     else:
         boxString += "The Godfather has no Jokers!\n"
 
     return boxString
-
 
 
 def constructTable(currentPlayer):
@@ -132,7 +135,7 @@ def checkStreetUrchin():
 
 @client.event
 async def on_message(message):
-    global guild, guildChannel, opened, started, players, currentPlayer, currentPlayerId, numberOfPlayers, box, godfather, godfatherSelect
+    global guild, guildChannel, opened, started, players, currentPlayer, currentPlayerId, numberOfPlayers, box, godfather, godfatherSelect, godfatherKill
 
 
     # Opening game session
@@ -288,17 +291,24 @@ async def on_message(message):
 
                 message = f'**{currentPlayer} passed the box!**\n\n'
                 currentPlayerId += 1
-                currentPlayer = playersOrder[currentPlayerId]
-                message += constructTable(currentPlayer)
-                await guildChannel.send(message)
+                if currentPlayerId == numberOfPlayers - 1:  # Gui - caixa passou por toda a gente
+                    godfatherKill = True
+                    await guildChannel.send('**The box has returned to the Godfather!**\n\n' + constructTable(godfather)
+                                            + f'\n\n Godfather {godfather}! Someone has stolen your precious diamonds! :ring: \n'
+                                              ':dagger: Hijos de puta traidores! :dagger:\n'
+                                              'Find out who and "dispose" of them!')
+                else:
+                    currentPlayer = playersOrder[currentPlayerId]
+                    message += constructTable(currentPlayer)
+                    await guildChannel.send(message)
 
-                playerMember = ''
-                for member in guild.members:
-                    if member.name == currentPlayer:
-                        playerMember = member
+                    playerMember = ''
+                    for member in guild.members:
+                        if member.name == currentPlayer:
+                            playerMember = member
 
-                await playerMember.create_dm()
-                await playerMember.dm_channel.send(constructBox('pass', currentPlayer) + constructOptions(checkStreetUrchin()))
+                    await playerMember.create_dm()
+                    await playerMember.dm_channel.send(constructBox('pass', currentPlayer) + constructOptions(checkStreetUrchin()))
 
             else:
                 message.channel.send('Duh.\n')
@@ -315,17 +325,23 @@ async def on_message(message):
 
                 message = f'**{currentPlayer} passed the box!**\n\n'
                 currentPlayerId += 1
-                currentPlayer = playersOrder[currentPlayerId]
-                message += constructTable(currentPlayer)
-                await guildChannel.send(message)
+                if currentPlayerId == numberOfPlayers - 1:  # Gui 6 linhas
+                    await guildChannel.send('**The box has returned to the Godfather!**\n\n' + constructTable(godfather)
+                                            + '\n\n Godfather! Someone has stolen your precious diamonds! :ring: \n'
+                                              ':dagger: Hijos de puta traidores! :dagger:\n'
+                                              'Find out who and "dispose" of them using `!mafia kill <player name>`')
+                else:
+                    currentPlayer = playersOrder[currentPlayerId]
+                    message += constructTable(currentPlayer)
+                    await guildChannel.send(message)
 
-                playerMember = ''
-                for member in guild.members:
-                    if member.name == currentPlayer:
-                        playerMember = member
+                    playerMember = ''
+                    for member in guild.members:
+                        if member.name == currentPlayer:
+                            playerMember = member
 
-                await playerMember.create_dm()
-                await playerMember.dm_channel.send(constructBox('pass', currentPlayer) + constructOptions(checkStreetUrchin()))
+                    await playerMember.create_dm()
+                    await playerMember.dm_channel.send(constructBox('pass', currentPlayer) + constructOptions(checkStreetUrchin()))
 
             else:
                 message.channel.send('Duh.\n')
@@ -342,17 +358,24 @@ async def on_message(message):
 
                 message = f'**{currentPlayer} passed the box!**\n\n'
                 currentPlayerId += 1
-                currentPlayer = playersOrder[currentPlayerId]
-                message += constructTable(currentPlayer)
-                await guildChannel.send(message)
+                if currentPlayerId == numberOfPlayers - 1:  # Gui -
+                    await guildChannel.send('**The box has returned to the Godfather!**\n\n' + constructTable(godfather)
+                                            + '\n\n Godfather! Someone has stolen your precious diamonds! :ring: \n'
+                                              ':dagger: Hijos de puta traidores! :dagger:\n'
+                                              'Find out who and "dispose" of them using `!mafia kill <player name>`')
 
-                playerMember = ''
-                for member in guild.members:
-                    if member.name == currentPlayer:
-                        playerMember = member
+                else:
+                    currentPlayer = playersOrder[currentPlayerId]
+                    message += constructTable(currentPlayer)
+                    await guildChannel.send(message)
 
-                await playerMember.create_dm()
-                await playerMember.dm_channel.send(constructBox('pass', currentPlayer) + constructOptions(checkStreetUrchin()))
+                    playerMember = ''
+                    for member in guild.members:
+                        if member.name == currentPlayer:
+                            playerMember = member
+
+                    await playerMember.create_dm()
+                    await playerMember.dm_channel.send(constructBox('pass', currentPlayer) + constructOptions(checkStreetUrchin()))
 
             else:
                 message.channel.send('Duh.\n')
@@ -369,17 +392,23 @@ async def on_message(message):
 
                 message = f'**{currentPlayer} passed the box!**\n\n'
                 currentPlayerId += 1
-                currentPlayer = playersOrder[currentPlayerId]
-                message += constructTable(currentPlayer)
-                await guildChannel.send(message)
+                if currentPlayerId == numberOfPlayers - 1:  # Gui 6 linhas
+                    await guildChannel.send('**The box has returned to the Godfather!**\n\n' + constructTable(godfather)
+                                            + '\n\n Godfather! Someone has stolen your precious diamonds! :ring: \n'
+                                              ':dagger: Hijos de puta traidores! :dagger:\n'
+                                              'Find out who and "dispose" of them using `!mafia kill <player name>`')
+                else:
+                    currentPlayer = playersOrder[currentPlayerId]
+                    message += constructTable(currentPlayer)
+                    await guildChannel.send(message)
 
-                playerMember = ''
-                for member in guild.members:
-                    if member.name == currentPlayer:
-                        playerMember = member
+                    playerMember = ''
+                    for member in guild.members:
+                        if member.name == currentPlayer:
+                            playerMember = member
 
-                await playerMember.create_dm()
-                await playerMember.dm_channel.send(constructBox('pass', currentPlayer) + constructOptions(checkStreetUrchin()))
+                    await playerMember.create_dm()
+                    await playerMember.dm_channel.send(constructBox('pass', currentPlayer) + constructOptions(checkStreetUrchin()))
 
             else:
                 message.channel.send('Duh.\n')
@@ -387,6 +416,36 @@ async def on_message(message):
             message.channel.send(f'Shut up {message.author.name}.\n')
 
 
+    # Someone picks street urchin
+    elif message.content == '!mafia street urchin':
+        if started and (not godfatherSelect):
+            if checkStreetUrchin():
+                players[message.author.name] = 'streetUrchin'
+
+                message = f'**{currentPlayer} passed the box!**\n\n'
+                currentPlayerId += 1
+                if currentPlayerId == numberOfPlayers - 1:  # Gui 6 linhas
+                    await guildChannel.send('**The box has returned to the Godfather!**\n\n' + constructTable(godfather)
+                                            + '\n\n Godfather! Someone has stolen your precious diamonds! :ring: \n'
+                                              ':dagger: Hijos de puta traidores! :dagger:\n'
+                                              'Find out who and "dispose" of them using `!mafia kill <player name>`')
+                else:
+                    currentPlayer = playersOrder[currentPlayerId]
+                    message += constructTable(currentPlayer)
+                    await guildChannel.send(message)
+
+                    playerMember = ''
+                    for member in guild.members:
+                        if member.name == currentPlayer:
+                            playerMember = member
+
+                    await playerMember.create_dm()
+                    await playerMember.dm_channel.send(constructBox('pass', currentPlayer) + constructOptions(True))
+
+            else:
+                message.channel.send('Duh.\n')
+        elif started and (not godfatherSelect) and (message.author.name != currentPlayer):
+            message.channel.send(f'Shut up {message.author.name}.\n')
 
 
 client.run(TOKEN)
