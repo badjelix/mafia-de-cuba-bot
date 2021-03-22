@@ -42,6 +42,7 @@ async def on_ready():
 opened = False
 started = False
 godfatherRemoveDiamonds = False
+boxPassing = False
 godfatherAccuse = False
 numberOfPlayers = 0
 players = {}
@@ -110,20 +111,20 @@ def constructTable(currentPlayer):
 
 
 # Constructs Options string possibly with the Street Urchin option
-def constructOptions(urchin):
+def constructOptions(streetUrchin):
     global box
     optionsString = ''
 
     if 'loyals' in box:
-        optionsString += ':arrow_right: Use `!mafia loyal` if you want to be a Loyal.\n'
+        optionsString += ':arrow_right: Use `!mafia take loyal` if you want to be a Loyal.\n'
     if 'agents' in box:
-        optionsString += ':arrow_right: Use `!mafia agent` if you want to be an Agent.\n'
+        optionsString += ':arrow_right: Use `!mafia take agent` if you want to be an Agent.\n'
     if 'taxidrivers' in box:
-        optionsString += ':arrow_right: Use `!mafia taxidriver` if you want to be a Taxidriver.\n'
+        optionsString += ':arrow_right: Use `!mafia take taxidriver` if you want to be a Taxidriver.\n'
     if 'diamonds' in box:
-        optionsString += ':arrow_right: Use `!mafia steal <number of diamonds>` to be a thief and remove <number of diamonds> diamonds.\n'
-    if urchin:
-        optionsString += ':arrow_right: Use `!mafia street urchin` to be a street urchin.\n'
+        optionsString += ':arrow_right: Use `!mafia take <number of diamonds> diamonds` if you want to be a Thief and remove <number of diamonds> diamonds.\n'
+    if streetUrchin:
+        optionsString += ':arrow_right: Use `!mafia take street urchin` if you want to be a Street Urchin.\n'
 
     return optionsString
 
@@ -154,6 +155,7 @@ def checkStreetUrchin():
 async def passTheBoxToNextPlayer():
     global currentPlayerId, currentPlayer, playersOrder, guildChannel
 
+    message = f'**{currentPlayer} passed the box!**\n\n'
     currentPlayerId += 1
     currentPlayer = playersOrder[currentPlayerId]
     message += constructTable(currentPlayer)
@@ -167,7 +169,10 @@ async def passTheBoxToNextPlayer():
 
 # Passses the box to the Godfather
 async def passTheBoxToGodfather():
-    global guildChannel, godfather
+    global guildChannel, godfather, godfatherAccuse, boxPassing
+
+    godfatherAccuse = True
+    boxPassing = False
 
     await guildChannel.send('**The box has returned to the Godfather!**\n\n' + constructTable(godfather) +
                             f'\n\n Godfather {godfather}! Someone has stolen your precious diamonds! :ring:\n' +
@@ -308,13 +313,13 @@ async def on_message(message):
     elif message.content[:13] == '!mafia remove':
 
         messageSplit = message.content.split()
-
         matches = bool(re.match('^[-+]?\d+$', messageSplit[2]))
 
         if matches and godfatherRemoveDiamonds and (message.author.name == godfather) and (int(messageSplit[2]) <= 5 and int(messageSplit[2]) >= 0):
             box["diamonds"] = box["diamonds"] - int(messageSplit[2])
 
             godfatherRemoveDiamonds = False
+            boxPassing = True
             currentPlayer = playersOrder[0]
             currentPlayerId = 0
 
@@ -332,117 +337,75 @@ async def on_message(message):
             await message.channel.send('You piece of shit.')
 
 
-    # SOMEONE REMOVES LOYAL
-    elif message.content == '!mafia loyal':
-        if started and (not godfatherRemoveDiamonds) and (not godfatherAccuse):
-            if box["loyals"] > 0:
+    # SOMEONE TAKES SOMETHING OUT OF THE BOX
+    elif message.content[:11] == '!mafia take':
 
-                box["loyals"] = box["loyals"] - 1
-                players[message.author.name] = 'loyal'
-                message = f'**{currentPlayer} passed the box!**\n\n'
+        if boxPassing and (message.author.name == currentPlayer):
 
-                if currentPlayerId == numberOfPlayers - 2:
-                    godfatherAccuse = True
-                    passTheBoxToGodfather()
+            messageSplit = message.content.split()
+            matchesWord = bool(re.match('^[a-z]+$', messageSplit[2]))
+            matchesNumber = bool(re.match('^[0-9]+$', messageSplit[2]))
 
+            if matchesWord:
+                if messageSplit[2] == 'loyal':
+                    if box["loyals"] > 0:
+                        box["loyals"] = box["loyals"] - 1
+                        players[message.author.name] = 'loyal'
+                        if currentPlayerId == numberOfPlayers - 2:
+                            passTheBoxToGodfather()
+                        else:
+                            passTheBoxToNextPlayer()
+                    else:
+                        message.channel.send('Duh.\n')
+                
+                elif messageSplit[2] == 'agent':
+                    if box["agents"] > 0:
+                        box["agents"] = box["agents"] - 1
+                        players[message.author.name] = 'agent'
+                        if currentPlayerId == numberOfPlayers - 2:
+                            passTheBoxToGodfather()
+                        else:
+                            passTheBoxToNextPlayer()
+                    else:
+                        message.channel.send('Duh.\n')
+
+                elif messageSplit[2] == 'taxidriver':
+                    if box["taxidrivers"] > 0:
+                        box["taxidrivers"] = box["taxidrivers"] - 1
+                        players[message.author.name] = 'taxidriver'
+                        if currentPlayerId == numberOfPlayers - 2:
+                            passTheBoxToGodfather()
+                        else:
+                            passTheBoxToNextPlayer()
+                    else:
+                        message.channel.send('Duh.\n')
+
+                elif messageSplit[2] == 'street' and messageSplit[3] == 'urchin':
+                    if checkStreetUrchin():
+                        players[message.author.name] = 'street urchin'
+                        if currentPlayerId == numberOfPlayers - 2:
+                            passTheBoxToGodfather()
+                        else:
+                            passTheBoxToNextPlayer()
+            
+            elif matchesNumber:
+                if int(messageSplit[2]) >= 0:
+                    matchesWord = bool(re.match('^[a-z]+$', messageSplit[3]))
+                    if matchesWord:
+                        if messageSplit[3] == 'diamonds':
+                            if box["diamonds"] >= int(messageSplit[2]):
+                                box["diamonds"] = box["diamonds"] - int(messageSplit[2])
+                                players[message.author.name] = 'thief - ' + messageSplit[2]
+                                if currentPlayerId == numberOfPlayers - 2:
+                                    passTheBoxToGodfather()
+                                else:
+                                    passTheBoxToNextPlayer()
+                            else:
+                                message.channel.send('You are taking too much diamonds')
                 else:
-                    passTheBoxToNextPlayer()
-
-            else:
-                message.channel.send('Duh.\n')
-
-        elif started and (not godfatherRemoveDiamonds) and (message.author.name != currentPlayer):
-            message.channel.send(f'Shut up {message.author.name}.\n')
-
-
-    # SOMEONE REMOVES AGENT
-    elif message.content == '!mafia agent':
-        if started and (not godfatherRemoveDiamonds) and (not godfatherAccuse):
-            if box["agents"] > 0:
-
-                box["agents"] = box["agents"] - 1
-                players[message.author.name] = 'agent'
-                message = f'**{currentPlayer} passed the box!**\n\n'
-
-                if currentPlayerId == numberOfPlayers - 2:
-                    godfatherAccuse = True
-                    passTheBoxToGodfather()
-
-                else:
-                    passTheBoxToNextPlayer()
-
-            else:
-                message.channel.send('Duh.\n')
-
-        elif started and (not godfatherRemoveDiamonds) and (message.author.name != currentPlayer):
-            message.channel.send(f'Shut up {message.author.name}.\n')
-
-
-    # SOMEONE REMOVES TAXIDRIVER
-    elif message.content == '!mafia taxidriver':
-        if started and (not godfatherRemoveDiamonds) and (not godfatherAccuse):
-            if box["taxidrivers"] > 0:
-
-                box["taxidrivers"] = box["taxidrivers"] - 1
-                players[message.author.name] = 'taxidriver'
-                message = f'**{currentPlayer} passed the box!**\n\n'
-
-                if currentPlayerId == numberOfPlayers - 2:
-                    godfatherAccuse = True
-                    passTheBoxToGodfather()
-
-                else:
-                    passTheBoxToNextPlayer()
-
-            else:
-                message.channel.send('Duh.\n')
-
-        elif started and (not godfatherRemoveDiamonds) and (message.author.name != currentPlayer):
-            message.channel.send(f'Shut up {message.author.name}.\n')
-
-
-    # SOMEONE REMOVES DIAMONDS
-    elif message.content[:15] == '!mafia diamonds':
-        if started and (not godfatherRemoveDiamonds) and (not godfatherAccuse):
-            if box["taxidrivers"] > 0:
-
-                box["taxidrivers"] = box["taxidrivers"] - 1
-                players[message.author.name] = 'thief'
-                message = f'**{currentPlayer} passed the box!**\n\n'
-
-                if currentPlayerId == numberOfPlayers - 2:
-                    godfatherAccuse = True
-                    passTheBoxToGodfather()
-
-                else:
-                    passTheBoxToNextPlayer()
-
-            else:
-                message.channel.send('Duh.\n')
-
-        elif started and (not godfatherRemoveDiamonds) and (message.author.name != currentPlayer):
-            message.channel.send(f'Shut up {message.author.name}.\n')
-
-
-    # SOMEONE PICKS STREET URCHIN
-    elif message.content == '!mafia street urchin':
-        if started and (not godfatherRemoveDiamonds) and (not godfatherAccuse):
-            if checkStreetUrchin():
-
-                players[message.author.name] = 'streetUrchin'
-                message = f'**{currentPlayer} passed the box!**\n\n'
-
-                if currentPlayerId == numberOfPlayers - 2:
-                    godfatherAccuse = True
-                    passTheBoxToGodfather()
-
-                else:
-                    passTheBoxToNextPlayer()
-
-            else:
-                message.channel.send('Duh.\n')
-
-        elif started and (not godfatherRemoveDiamonds) and (message.author.name != currentPlayer):
+                    message.channel.send(f'Stop being retardation, {message.author.name}.')
+        
+        else:
             message.channel.send(f'Shut up {message.author.name}.\n')
 
 
