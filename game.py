@@ -48,6 +48,7 @@ godfatherAccuse = False
 numberOfPlayers = 0
 players = {}
 box = {}
+initialBox = {}
 bag = ''
 playersOrder = []
 godfather = ''
@@ -63,6 +64,8 @@ emojis = {
     'thief' : ':detective:',
     'street urchin' : ':child:',
     'godfather' : ':ring:',
+    'diamonds' : ':gem:',
+    'jokers' : ':whisky:',
     'empty' : ':spider_web:',
 }
 
@@ -74,7 +77,7 @@ emojis = {
 
 # Constructs Box string given a context and a player name
 def constructBox(context, name):
-    global box, numberOfPlayers
+    global box, numberOfPlayers, emojis
 
     boxString = ''
 
@@ -85,28 +88,53 @@ def constructBox(context, name):
     elif context == 'accuse':
         boxString += f'Godfather {name}! Here\'s your box... Looks like someone has stolen your diamonds!\n'
         boxString += 'Get revenge and retrieve them back using `!mafia accuse <traitor name>`\n\n.'
+
     boxString += '----------------- \n'
-    boxString += f'Loyals - {box["loyals"]} \n'
-    boxString += f'Agents - {box["agents"]} \n'
+    boxString += f'Loyals - {box["loyals"]} {emojis["loyal"]}\n'
+    boxString += f'Agents - {box["agents"]} {emojis["cop"]}\n'
 
     if 'taxidrivers' in box:
-        boxString += f'Taxidrivers - {box["taxidrivers"]} \n'
+        boxString += f'Taxidrivers - {box["taxidrivers"]} {emojis["taxidriver"]}\n'
 
-    boxString += f'Diamonds - {box["diamonds"]} \n'
+    boxString += f'Diamonds - {box["diamonds"]} {emojis["diamonds"]} \n'
     boxString += '----------------- \n\n'
 
     if context == 'start' or context == 'accuse':
         if 'jokers' in box:
-            boxString += f'The Godfather has {box["jokers"]} Jokers. \n\n'
+            boxString += f'The Godfather has {box["jokers"]} Jokers {emojis["jokers"]} \n\n'
         else:
             boxString += "The Godfather has no Jokers!\n"
 
     return boxString
 
 
+# Constructs Box for when a player asks for the game status
+def constructsStatusBox():
+    global initialBox
+
+    boxString = f'This was the initial state of the box:\n'
+
+    boxString += '----------------- \n'
+    boxString += f'Loyals - {initialBox["loyals"]} {emojis["loyal"]}\n'
+    boxString += f'Agents - {initialBox["agents"]} {emojis["cop"]}\n'
+
+    if 'taxidrivers' in box:
+        boxString += f'Taxidrivers - {initialBox["taxidrivers"]} {emojis["taxidriver"]}\n'
+
+    boxString += f'Diamonds - {initialBox["diamonds"]} {emojis["diamonds"]} \n'
+    boxString += '----------------- \n\n'
+
+    if 'jokers' in box:
+        boxString += f'The Godfather has {initialBox["jokers"]} Jokers {emojis["jokers"]} \n\n'
+    else:
+        boxString += "The Godfather has no Jokers!\n"
+
+    return boxString
+
+
 # Constructs Table string given the current player name
 def constructTable(currentPlayer):
-    global numberOfPlayers, playersOrder, godfather
+    global numberOfPlayers, playersOrder, godfather, emojis
 
     tableString = '**Table:**\n'
 
@@ -117,9 +145,9 @@ def constructTable(currentPlayer):
             tableString += '(' + str(i+1) + ') ' + playersOrder[i] + '\n'
     
     if godfather == currentPlayer:
-        tableString += '\n **Godfather**: ' + godfather + ' :ring: :briefcase:\n\n'
+        tableString += '\n **Godfather**: ' + godfather + f' {emojis["godfather"]} :briefcase:\n\n'
     else:
-        tableString += '\n **Godfather**: ' + godfather + ' :ring:\n\n'
+        tableString += '\n **Godfather**: ' + godfather + f' {emojis["godfather"]}\n\n'
 
     return tableString
 
@@ -221,6 +249,8 @@ async def on_message(message):
         if opened and (not started) and (message.author.name not in players.keys()):
             players[message.author.name] = ['TBD', 'alive']
             playerList = '\n - '.join(players.keys())
+            if godfather != '':
+                playerList += f'\n\n The **Godfather** is {godfather} {emojis["godfather"]}'
             await guildChannel.send(f'{message.author.name} joined the game! :gun:\n' +
                                     f'Players in the room **[{len(players)}]**:\n - {playerList}'
             )
@@ -258,20 +288,28 @@ async def on_message(message):
 
                 if numberOfPlayers == 5:
                     box = {'loyals':1, 'agents':1, 'diamonds':15}
+                    initialBox = box
                 elif numberOfPlayers == 6:
                     box = {'loyals':1, 'agents':1, 'taxidrivers':1, 'diamonds':15}
+                    initialBox = box
                 elif numberOfPlayers == 7:
                     box = {'loyals':2, 'agents':1, 'taxidrivers':1, 'diamonds':15}
+                    initialBox = box
                 elif numberOfPlayers == 8:
                     box = {'loyals':3, 'agents':1, 'taxidrivers':1, 'jokers':1, 'diamonds':15}
+                    initialBox = box
                 elif numberOfPlayers == 9:
                     box = {'loyals':4, 'agents':1, 'taxidrivers':1, 'jokers':1, 'diamonds':15}
+                    initialBox = box
                 elif numberOfPlayers == 10:
                     box = {'loyals':4, 'agents':2, 'taxidrivers':1, 'jokers':1, 'diamonds':15}
+                    initialBox = box
                 elif numberOfPlayers == 11:
                     box = {'loyals':4, 'agents':2, 'taxidrivers':2, 'jokers':2, 'diamonds':15}
+                    initialBox = box
                 else:
                     box = {'loyals':5, 'agents':2, 'taxidrivers':2, 'jokers':2, 'diamonds':15}
+                    initialBox = box
 
                 for player in players.keys():
                     if player != godfather:
@@ -564,13 +602,13 @@ async def on_message(message):
                 players[traitor][1] = 'dead'
 
                 if players[traitor][0] == 'loyal':
-                    await guildChannel.send(f'**Oh no! {traitor} is a Loyal!** :person_in_tuxedo: :gun:\n')
+                    await guildChannel.send(f'**Oh no! {traitor} is a Loyal!** {emojis["loyal"]} :gun:\n')
                 elif players[traitor][0] == 'agent':
                     endAccusing = True
                     updateJoker = False
-                    await guildChannel.send(f'**OHHHHH! :astonished: {traitor} is an Agent!!!** :cop: :gun:\n')
+                    await guildChannel.send(f'**OHHHHH! :astonished: {traitor} is an Agent!!!** {emojis["agent"]} :gun:\n')
                 elif players[traitor][0] == 'taxidriver':
-                    await guildChannel.send(f'**{traitor} is a Taxidriver.** :pilot: :gun:\n')
+                    await guildChannel.send(f'**{traitor} is a Taxidriver.** {emojis["taxidriver"]} :gun:\n')
                 elif players[traitor][0][:5] == 'thief':
                     endAccusing = True
                     updateJoker = False
@@ -579,13 +617,13 @@ async def on_message(message):
                             endAccusing = False
                             break
                     diamonds = players[traitor][0].split()[1]
-                    await guildChannel.send(f'**Good job! {traitor} is a Thief that stole {diamonds} diamonds!** :detective: :gun:\n')
+                    await guildChannel.send(f'**Good job! {traitor} is a Thief that stole {diamonds} diamonds!** {emojis["thief"]} :gun:\n')
                 elif players[traitor][0] == 'street urchin':
-                    await guildChannel.send(f'**Oh no! {traitor} is a Street Urchin!** :child: :gun:\n')
+                    await guildChannel.send(f'**Oh no! {traitor} is a Street Urchin!** {emojis["street urchin"]} :gun:\n')
 
                 if updateJoker and ('jokers' in box) and box["jokers"] > 0:
                     box["jokers"] = box["jokers"] - 1
-                    await guildChannel.send(f'Jokers left for the Godfather: {box["jokers"]}.')
+                    await guildChannel.send(f'Jokers left for the Godfather: {box["jokers"]} {emojis["jokers"]}')
                 elif updateJoker and ('jokers' not in box) or box["jokers"] == 0:
                     endAcussing = True
                     await guildChannel.send('The Godfather has no Jokers left! He/She was not able to find the traitors!\n')
@@ -668,6 +706,19 @@ async def on_message(message):
                 ':arrow_right: Use `!mafia help` if you are lost.\n\n'
                 ':gem: To start the game you need 5 to 12 players in the session.'
             )
+
+    # MAFIA STATUS
+    elif message.content == "!mafia status":
+        if opened and not started:
+            playerList = '\n - '.join(players.keys())
+            if godfather != '':
+                playerList += f'\n\n The **Godfather** is {godfather} {emojis["godfather"]}'
+            await guildChannel.send(f'Players in the room **[{len(players)}]**:\n - {playerList}')
+        elif started:
+            playerList = '\n - '.join(players.keys())
+            await guildChannel.send(f'Players in the room **[{len(players)}]**:\n - {playerList}\n' + constructsStatusBox())
+
+
 
 
 
