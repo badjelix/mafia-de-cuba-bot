@@ -82,9 +82,9 @@ def constructBox(context, name):
         boxString += '**Box:**\n\n'
     elif context == 'pass':
         boxString += f'Take the box {name}. Don\'t show it to anyone or Tony Hawkings will kill you.\n\n'
-    elif context == 'accuse:':
+    elif context == 'accuse':
         boxString += f'Godfather {name}! Here\'s your box... Looks like someone has stolen your diamonds!\n'
-        boxString += 'Get revenge and retrieve them back using `!mafia accuse <traitor name>`.'
+        boxString += 'Get revenge and retrieve them back using `!mafia accuse <traitor name>`\n\n.'
     boxString += '----------------- \n'
     boxString += f'Loyals - {box["loyals"]} \n'
     boxString += f'Agents - {box["agents"]} \n'
@@ -128,7 +128,7 @@ def constructTable(currentPlayer):
 def constructBagOptions():
     global box
 
-    bagOptionsString = 'You\'re the first player with the box! You get to hide a character in the bag, or not, you choose!' + \
+    bagOptionsString = 'You\'re the first player with the box! You get to hide a character in the bag, or not, you choose!\n' + \
                        ':arrow_right: Use `!mafia bag loyal` if you want to hide a Loyal.\n' + \
                        ':arrow_right: Use `!mafia bag agent` if you want to hide an Agent.\n'
 
@@ -145,15 +145,15 @@ def constructOptions(streetUrchin):
     global box
     optionsString = ''
 
-    if 'loyals' in box:
+    if 'loyals' in box and box["loyals"] > 0:
         optionsString += ':arrow_right: Use `!mafia take loyal` if you want to be a Loyal.\n'
-    if 'agents' in box:
+    if 'agents' in box and box["agents"] > 0:
         optionsString += ':arrow_right: Use `!mafia take agent` if you want to be an Agent.\n'
-    if 'taxidrivers' in box:
+    if 'taxidrivers' in box and box["taxidrivers"] > 0:
         optionsString += ':arrow_right: Use `!mafia take taxidriver` if you want to be a Taxidriver.\n'
-    if 'diamonds' in box:
+    if 'diamonds' in box and box["diamonds"] > 0:
         optionsString += ':arrow_right: Use `!mafia take <number of diamonds> diamonds` if you want to be a Thief and remove <number of diamonds> diamonds.\n'
-    if 'streetUrchin':
+    if streetUrchin:
         optionsString += ':arrow_right: Use `!mafia take street urchin` if you want to be a Street Urchin.\n'
 
     return optionsString
@@ -179,143 +179,6 @@ def checkStreetUrchin():
         streetUrchin = True
 
     return streetUrchin
-
-
-# Passes the box to the next player
-async def passTheBoxToNextPlayer():
-    global currentPlayerId, currentPlayer, playersOrder, guildChannel
-
-    message = f'**{currentPlayer} passed the box!**\n\n'
-    currentPlayerId += 1
-    currentPlayer = playersOrder[currentPlayerId]
-    message += constructTable(currentPlayer)
-    await guildChannel.send(message)
-
-    playerMember = getMember(currentPlayer)
-
-    await playerMember.create_dm()
-    await playerMember.dm_channel.send(constructBox('pass', currentPlayer) + constructOptions(checkStreetUrchin()))
-
-
-# Passses the box to the Godfather
-async def passTheBoxToGodfather():
-    global guildChannel, godfather, godfatherAccuse, boxPassing
-
-    boxPassing = False
-    godfatherAccuse = True
-
-    await guildChannel.send('**The box has returned to the Godfather!**\n\n' + constructTable(godfather) +
-                            f'\n\n Godfather {godfather}! Someone has stolen your precious diamonds! :ring:\n' +
-                            ':dagger: Hijos de puta, traidores! :dagger:\n' +
-                            'Find out who and "dispose" of them!')
-
-    godfatherMember = getMember(godfather)
-    await godfatherMember.create_dm()
-    await godfatherMember.dm_channel.send(constructBox('accuse', godfather))
-
-
-# Reveal the character of an accused player
-async def revealCharacter(name,character):
-    global guildChannel, players
-
-    endAccusing = False
-    updateJoker = True
-
-    players[name][1] = 'dead'
-
-    if character == 'loyal':
-        await guildChannel.send(f'**Oh no! {name} is a Loyal!** :person_in_tuxedo: :gun:\n')
-    elif character == 'agent':
-        endAccusing = True
-        updateJoker = False
-        await guildChannel.send(f'**OHHHHH! :astonished: {name} is an Agent!!!** :cop: :gun:\n')
-    elif character == 'taxidriver':
-        await guildChannel.send(f'**{name} is a Taxidriver.** :pilot: :gun:\n')
-    elif character[:5] == 'thief':
-        endAccusing = True
-        updateJoker = False
-        for player in list(players.values()):
-            if player[0][:5] == 'thief' and player[1] == 'alive':
-                endAccusing = False
-                break
-        diamonds = character.split()[1]
-        await guildChannel.send(f'**Good job! {name} is a Thief that stole {diamonds} diamonds!** :detective: :gun:\n')
-    elif character == 'street urchin':
-        await guildChannel.send(f'**Oh no! {name} is a Street Urchin!** :child: :gun:\n')
-
-    if updateJoker and ('jokers' in box) and box["jokers"] > 0:
-        box["jokers"] = box["jokers"] - 1
-        await guildChannel.send(f'Jokers left for the Godfather: {box["jokers"]}.')
-    elif updateJoker and ('jokers' not in box) or box["jokers"] == 0:
-        endAcussing = True
-        await guildChannel.send('The Godfather has no Jokers left! He/She was not able to find the traitors!\n')
-
-    return endAccusing
-
-
-# Prints who wins the game!
-async def showWinners(character):
-    global players, playersOrder, numberOfPlayers
-
-    winners = []
-    winnersIds = []
-    taxidriversId = []
-    godfatherWins = False
-
-    if character == 'loyal' or character == 'taxidriver' or 'street urchin':
-        for player in list(players.items()):
-            if player[1][0][:5] == 'thief' or player[1][0] == 'street urchin':
-                winners.append(player[0])
-    elif character == 'agent':
-        for player in list(players.items()):
-            if player[1][0] == 'agent' and player[1][1] == 'dead':
-                winners.append(player[0])
-                break
-    elif character[:5] == 'thief':
-        godfatherWins = True
-        for player in list(players.items()):
-            if player[1][0] == 'loyal':
-                winners.append(player[0])
-    
-
-    for winner in winners:
-        for i in range(numberOfPlayers-1):
-            if playersOrder[i] == winner:
-                winnersIds.append(i)
-
-    for player in list(players.items()):
-        if player[1][0] == 'taxidriver':
-            for i in range(numberOfPlayers-1):
-                if playersOrder[i] == player[0]:
-                    taxidriversId.append(i)
-
-    for taxidriver in taxidriversId:
-        for winner in winnersIds:
-            if taxidriver == (winner + 1) % (numberOfPlayers-1):
-                winners.append(playersOrder[taxidriver])
-
-    
-    finalResults = '**FINAL RESULTS**\n\n'
-
-    for i in range(numberOfPlayers-1):
-        if playersOrder[i] in winners:
-            finalResults += '(' + str(i+1) + ') **' + playersOrder[i] + '** :military_medal: '
-        else:
-            finalResults += '(' + str(i+1) + ')' + playersOrder[i] + ':skull: '
-
-        finalResults += emojis[players[playersOrder[i]][0]] + ' '
-
-        if i == 0:
-            finalResults += '[' + emojis[bag] + ']\n'
-    
-    if godfatherWins:
-        finalResults += '\n **Godfather**: **' + godfather + '** :military_medal: :ring:\n\n'
-    else:
-        finalResults += '\n **Godfather**: ' + godfather + ' :skull: :ring:\n\n'
-
-    await guildChannel.send(finalResults)
-
-
 
 
 # Gets member by name
@@ -487,14 +350,12 @@ async def on_message(message):
                     bag = 'loyal'
                     bagDecision = False
                     boxPassing = True
-
                     playerMember = getMember(currentPlayer)
-
                     await playerMember.create_dm()
                     await playerMember.dm_channel.send(constructBox('pass', currentPlayer) + constructOptions(False))
 
                 else:
-                    message.channel.send('Duh.\n')
+                    await message.channel.send('Duh.\n')
 
             # Player bags agent
             elif messageSplit[2] == 'agent':
@@ -503,14 +364,12 @@ async def on_message(message):
                     bag = 'agent'
                     bagDecision = False
                     boxPassing = True
-
                     playerMember = getMember(currentPlayer)
-
                     await playerMember.create_dm()
                     await playerMember.dm_channel.send(constructBox('pass', currentPlayer) + constructOptions(False))
 
                 else:
-                    message.channel.send('Duh.\n')
+                    await message.channel.send('Duh.\n')
 
             # Player bags taxidriver
             elif messageSplit[2] == 'taxidriver':
@@ -519,9 +378,7 @@ async def on_message(message):
                     bag = 'taxidriver'
                     bagDecision = False
                     boxPassing = True
-
                     playerMember = getMember(currentPlayer)
-
                     await playerMember.create_dm()
                     await playerMember.dm_channel.send(constructBox('pass', currentPlayer) + constructOptions(False))
 
@@ -533,9 +390,7 @@ async def on_message(message):
                 bag = 'empty'
                 bagDecision = False
                 boxPassing = True
-
                 playerMember = getMember(currentPlayer)
-
                 await playerMember.create_dm()
                 await playerMember.dm_channel.send(constructOptions(False))
 
@@ -556,11 +411,26 @@ async def on_message(message):
                         box["loyals"] = box["loyals"] - 1
                         players[message.author.name] = ['loyal','alive']
                         if currentPlayerId == numberOfPlayers - 2:
-                            passTheBoxToGodfather()
+                            boxPassing = False
+                            godfatherAccuse = True
+                            await guildChannel.send('**The box has returned to the Godfather!**\n\n' + constructTable(godfather) +
+                                                    f'\n:gem: **Godfather {godfather}!** Someone has stolen your precious diamonds! :face_with_symbols_over_mouth:\n' +
+                                                    ':dagger: Hijos de puta, traidores! :dagger:\n' +
+                                                    '**The Godfather must find the thieves!**')
+                            godfatherMember = getMember(godfather)
+                            await godfatherMember.create_dm()
+                            await godfatherMember.dm_channel.send(constructBox('accuse', godfather))
                         else:
-                            passTheBoxToNextPlayer()
+                            message = f'**{currentPlayer} passed the box!**\n\n'
+                            currentPlayerId += 1
+                            currentPlayer = playersOrder[currentPlayerId]
+                            message += constructTable(currentPlayer)
+                            await guildChannel.send(message)
+                            playerMember = getMember(currentPlayer)
+                            await playerMember.create_dm()
+                            await playerMember.dm_channel.send(constructBox('pass', currentPlayer) + constructOptions(checkStreetUrchin()))
                     else:
-                        message.channel.send('Duh.\n')
+                        await message.channel.send('Duh.\n')
                 
                 # Player takes agent
                 elif messageSplit[2] == 'agent':
@@ -568,11 +438,26 @@ async def on_message(message):
                         box["agents"] = box["agents"] - 1
                         players[message.author.name] = ['agent','alive']
                         if currentPlayerId == numberOfPlayers - 2:
-                            passTheBoxToGodfather()
+                            boxPassing = False
+                            godfatherAccuse = True
+                            await guildChannel.send('**The box has returned to the Godfather!**\n\n' + constructTable(godfather) +
+                                                    f'\n:gem: **Godfather {godfather}!** Someone has stolen your precious diamonds! :face_with_symbols_over_mouth:\n' +
+                                                    ':dagger: Hijos de puta, traidores! :dagger:\n' +
+                                                    '**The Godfather must find the thieves!**')
+                            godfatherMember = getMember(godfather)
+                            await godfatherMember.create_dm()
+                            await godfatherMember.dm_channel.send(constructBox('accuse', godfather))
                         else:
-                            passTheBoxToNextPlayer()
+                            message = f'**{currentPlayer} passed the box!**\n\n'
+                            currentPlayerId += 1
+                            currentPlayer = playersOrder[currentPlayerId]
+                            message += constructTable(currentPlayer)
+                            await guildChannel.send(message)
+                            playerMember = getMember(currentPlayer)
+                            await playerMember.create_dm()
+                            await playerMember.dm_channel.send(constructBox('pass', currentPlayer) + constructOptions(checkStreetUrchin()))
                     else:
-                        message.channel.send('Duh.\n')
+                        await message.channel.send('Duh.\n')
 
                 # Player takes taxidriver
                 elif messageSplit[2] == 'taxidriver':
@@ -580,56 +465,196 @@ async def on_message(message):
                         box["taxidrivers"] = box["taxidrivers"] - 1
                         players[message.author.name] = ['taxidriver','alive']
                         if currentPlayerId == numberOfPlayers - 2:
-                            passTheBoxToGodfather()
+                            boxPassing = False
+                            godfatherAccuse = True
+                            await guildChannel.send('**The box has returned to the Godfather!**\n\n' + constructTable(godfather) +
+                                                    f'\n:gem: **Godfather {godfather}!** Someone has stolen your precious diamonds! :face_with_symbols_over_mouth:\n' +
+                                                    ':dagger: Hijos de puta, traidores! :dagger:\n' +
+                                                    '**The Godfather must find the thieves!**')
+                            godfatherMember = getMember(godfather)
+                            await godfatherMember.create_dm()
+                            await godfatherMember.dm_channel.send(constructBox('accuse', godfather))
                         else:
-                            passTheBoxToNextPlayer()
+                            message = f'**{currentPlayer} passed the box!**\n\n'
+                            currentPlayerId += 1
+                            currentPlayer = playersOrder[currentPlayerId]
+                            message += constructTable(currentPlayer)
+                            await guildChannel.send(message)
+                            playerMember = getMember(currentPlayer)
+                            await playerMember.create_dm()
+                            await playerMember.dm_channel.send(constructBox('pass', currentPlayer) + constructOptions(checkStreetUrchin()))
                     else:
-                        message.channel.send('Duh.\n')
+                        await message.channel.send('Duh.\n')
 
                 # Player takes street urchin
                 elif messageSplit[2] == 'street' and messageSplit[3] == 'urchin':
                     if checkStreetUrchin():
                         players[message.author.name] = ['street urchin','alive']
                         if currentPlayerId == numberOfPlayers - 2:
-                            passTheBoxToGodfather()
+                            boxPassing = False
+                            godfatherAccuse = True
+                            await guildChannel.send('**The box has returned to the Godfather!**\n\n' + constructTable(godfather) +
+                                                    f'\n:gem: **Godfather {godfather}!** Someone has stolen your precious diamonds! :face_with_symbols_over_mouth:\n' +
+                                                    ':dagger: Hijos de puta, traidores! :dagger:\n' +
+                                                    '**The Godfather must find the thieves!**')
+                            godfatherMember = getMember(godfather)
+                            await godfatherMember.create_dm()
+                            await godfatherMember.dm_channel.send(constructBox('accuse', godfather))
                         else:
-                            passTheBoxToNextPlayer()
+                            message = f'**{currentPlayer} passed the box!**\n\n'
+                            currentPlayerId += 1
+                            currentPlayer = playersOrder[currentPlayerId]
+                            message += constructTable(currentPlayer)
+                            await guildChannel.send(message)
+                            playerMember = getMember(currentPlayer)
+                            await playerMember.create_dm()
+                            await playerMember.dm_channel.send(constructBox('pass', currentPlayer) + constructOptions(checkStreetUrchin()))
             
             # Player takes diamonds
             elif matchesNumber:
-                if int(messageSplit[2]) >= 0:
-                    if messageSplit[3] == 'diamonds':
-                        if box["diamonds"] >= int(messageSplit[2]):
-                            box["diamonds"] = box["diamonds"] - int(messageSplit[2])
-                            players[message.author.name] = ['thief ' + messageSplit[2],'alive']
-                            if currentPlayerId == numberOfPlayers - 2:
-                                passTheBoxToGodfather()
+                if len(messageSplit) == 4:
+                    if int(messageSplit[2]) >= 0:
+                        if messageSplit[3] == 'diamonds':
+                            if box["diamonds"] >= int(messageSplit[2]):
+                                box["diamonds"] = box["diamonds"] - int(messageSplit[2])
+                                players[message.author.name] = ['thief ' + messageSplit[2],'alive']
+                                if currentPlayerId == numberOfPlayers - 2:
+                                    boxPassing = False
+                                    godfatherAccuse = True
+                                    await guildChannel.send('**The box has returned to the Godfather!**\n\n' + constructTable(godfather) +
+                                                            f'\n:gem: **Godfather {godfather}!** Someone has stolen your precious diamonds! :face_with_symbols_over_mouth:\n' +
+                                                            ':dagger: Hijos de puta, traidores! :dagger:\n' +
+                                                            '**The Godfather must find the thieves!**')
+                                    godfatherMember = getMember(godfather)
+                                    await godfatherMember.create_dm()
+                                    await godfatherMember.dm_channel.send(constructBox('accuse', godfather))
+                                else:
+                                    message = f'**{currentPlayer} passed the box!**\n\n'
+                                    currentPlayerId += 1
+                                    currentPlayer = playersOrder[currentPlayerId]
+                                    message += constructTable(currentPlayer)
+                                    await guildChannel.send(message)
+                                    playerMember = getMember(currentPlayer)
+                                    await playerMember.create_dm()
+                                    await playerMember.dm_channel.send(constructBox('pass', currentPlayer) + constructOptions(checkStreetUrchin()))
                             else:
-                                passTheBoxToNextPlayer()
+                                await message.channel.send('You are taking too much diamonds')
                         else:
-                            message.channel.send('You are taking too much diamonds')
+                            await message.channel.send(f'Your message is stupid.')
+                    else:
+                        await message.channel.send(f'Stop being retardation, {message.author.name}.')
                 else:
-                    message.channel.send(f'Stop being retardation, {message.author.name}.')
+                    await message.channel.send(f'Your message is stupid.')
         
         else:
-            message.channel.send(f'Shut up {message.author.name}.\n')
+            await message.channel.send(f'Shut up {message.author.name}.\n')
 
 
     # GODFATHER ACCUSES THIEF
-    elif message.content[:11] == '!mafia accuse':
+    elif message.content[:13] == '!mafia accuse':
         if godfatherAccuse and message.author.name == godfather:
 
             traitor = message.content[14:]
 
             if traitor in players.keys():
-                godfatherAccuse = revealCharacter(traitor, players[traitor][0])
-                if not godfatherAccuse:
-                    showWinners(players[traitor][0])
+                # reveal character
+                endAccusing = False
+                updateJoker = True
+
+                players[traitor][1] = 'dead'
+
+                if players[traitor][0] == 'loyal':
+                    await guildChannel.send(f'**Oh no! {traitor} is a Loyal!** :person_in_tuxedo: :gun:\n')
+                elif players[traitor][0] == 'agent':
+                    endAccusing = True
+                    updateJoker = False
+                    await guildChannel.send(f'**OHHHHH! :astonished: {traitor} is an Agent!!!** :cop: :gun:\n')
+                elif players[traitor][0] == 'taxidriver':
+                    await guildChannel.send(f'**{traitor} is a Taxidriver.** :pilot: :gun:\n')
+                elif players[traitor][0][:5] == 'thief':
+                    endAccusing = True
+                    updateJoker = False
+                    for player in list(players.values()):
+                        if player[0][:5] == 'thief' and player[1] == 'alive':
+                            endAccusing = False
+                            break
+                    diamonds = players[traitor][0].split()[1]
+                    await guildChannel.send(f'**Good job! {traitor} is a Thief that stole {diamonds} diamonds!** :detective: :gun:\n')
+                elif players[traitor][0] == 'street urchin':
+                    await guildChannel.send(f'**Oh no! {traitor} is a Street Urchin!** :child: :gun:\n')
+
+                if updateJoker and ('jokers' in box) and box["jokers"] > 0:
+                    box["jokers"] = box["jokers"] - 1
+                    await guildChannel.send(f'Jokers left for the Godfather: {box["jokers"]}.')
+                elif updateJoker and ('jokers' not in box) or box["jokers"] == 0:
+                    endAcussing = True
+                    await guildChannel.send('The Godfather has no Jokers left! He/She was not able to find the traitors!\n')
+
+                if endAccusing:
+                    # show winners
+                    winners = []
+                    winnersIds = []
+                    taxidriversId = []
+                    godfatherWins = False
+
+                    if players[traitor][0] == 'loyal' or players[traitor][0] == 'taxidriver' or 'street urchin':
+                        for player in list(players.items()):
+                            if player[1][0][:5] == 'thief' or player[1][0] == 'street urchin':
+                                winners.append(player[0])
+                    elif players[traitor][0] == 'agent':
+                        for player in list(players.items()):
+                            if player[1][0] == 'agent' and player[1][1] == 'dead':
+                                winners.append(player[0])
+                                break
+                    elif players[traitor][0][:5] == 'thief':
+                        godfatherWins = True
+                        for player in list(players.items()):
+                            if player[1][0] == 'loyal':
+                                winners.append(player[0])
+                    
+
+                    for winner in winners:
+                        for i in range(numberOfPlayers-1):
+                            if playersOrder[i] == winner:
+                                winnersIds.append(i)
+
+                    for player in list(players.items()):
+                        if player[1][0] == 'taxidriver':
+                            for i in range(numberOfPlayers-1):
+                                if playersOrder[i] == player[0]:
+                                    taxidriversId.append(i)
+
+                    for taxidriver in taxidriversId:
+                        for winner in winnersIds:
+                            if taxidriver == (winner + 1) % (numberOfPlayers-1):
+                                winners.append(playersOrder[taxidriver])
+
+                    
+                    finalResults = '**FINAL RESULTS**\n\n'
+
+                    for i in range(numberOfPlayers-1):
+                        if playersOrder[i] in winners:
+                            finalResults += '(' + str(i+1) + ') **' + playersOrder[i] + '** :military_medal: '
+                        else:
+                            finalResults += '(' + str(i+1) + ')' + playersOrder[i] + ':skull: '
+
+                        finalResults += emojis[players[playersOrder[i]][0]] + ' '
+
+                        if i == 0:
+                            finalResults += '[' + emojis[bag] + ']\n'
+                    
+                    if godfatherWins:
+                        finalResults += '\n **Godfather**: **' + godfather + '** :military_medal: :ring:\n\n'
+                    else:
+                        finalResults += '\n **Godfather**: ' + godfather + ' :skull: :ring:\n\n'
+
+                    await guildChannel.send(finalResults)
+
             else:
                 await message.channel.send(f'{traitor} is not in the room. Check if you spelled his/her name right.')
             
         else:
-            message.channel.send(f'Stop it, {message.author.name}')
+            await message.channel.send(f'Stop it, {message.author.name}')
     
 
     # SOMEONE ASKS FOR HELP
