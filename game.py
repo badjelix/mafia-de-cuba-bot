@@ -740,7 +740,7 @@ async def on_message(message):
                     elif players[traitor][0][:5] == 'thief':
                         godfatherWins = True
                         for player in list(players.items()):
-                            if player[1][0] == 'loyal' or (player[1][0] == 'cleaner' and player[1][1] == 'alive)':
+                            if player[1][0] == 'loyal' or (player[1][0] == 'cleaner' and player[1][1] == 'alive'):
                                 winners.append(player[0])
                     
 
