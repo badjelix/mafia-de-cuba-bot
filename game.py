@@ -85,7 +85,7 @@ def constructBox(context, name):
     boxString = ''
 
     if context == 'start':
-        boxString += '**Box:**\n\n'
+        boxString += '**Box:**\n'
     elif context == 'pass':
         boxString += f'Take the box {name}. Don\'t show it to anyone or Tony Hawkings will kill you.\n\n'
     elif context == 'accuse':
@@ -254,7 +254,7 @@ def getMember(name):
 @client.event
 async def on_message(message):
     global guild, guildChannel, opened, started, players, currentPlayer, currentPlayerId, numberOfPlayers, box, bag, \
-           godfather, godfatherRemoveDiamonds, bagDecision, boxPassing, godfatherAccuse
+           godfather, godfatherRemoveDiamonds, bagDecision, boxPassing, godfatherAccuse, BAM
 
 
     # OPEN GAME SESSION
@@ -663,7 +663,8 @@ async def on_message(message):
                 players[traitor][1] = 'dead'
 
                 if players[traitor][0] == 'loyal':
-                    await guildChannel.send(f'The Cleaner has 8 seconds to choose to kill {traitor}. Use `!mafia kill` to do so!\n')
+                    await guildChannel.send(f'The Godfather has accused {traitor}! The Cleaner has 8 seconds to choose to kill {traitor}. ' +
+                                            'Use `!mafia kill` to do so!\n')
                     time.sleep(8)
                     if BAM:
                         BAM = False
@@ -693,7 +694,7 @@ async def on_message(message):
                 elif players[traitor][0][:5] == 'thief':
                     godfatherAccuse = False
                     updateJoker = False
-                    for player in list(players.values()):
+                    for player in players.values():
                         if player[0][:5] == 'thief' and player[1] == 'alive':
                             godfatherAccuse = True
                             break
@@ -718,13 +719,13 @@ async def on_message(message):
 
                     if players[traitor][0] == 'loyal' or players[traitor][0] == 'taxidriver' or players[traitor][0] == 'street urchin':
                         # street urchin wins
-                        for player in list(players.items()):
+                        for player in players.items():
                             if player[1][0] == 'street urchin':
                                 winners.append(player[0])
                         maxDiamonds = 0
                         maxThief = ''
                         # thief with most diamonds wins FIXME EM CASO DE EMPATE GANHAM OS DOIS
-                        for players in list(players.items()):
+                        for players in players.items():
                             if player[1][0][:5] == 'thief' and player[1][1] == 'alive' and player[1][0].split()[1] > maxDiamonds:
                                 maxDiamonds = player[1][0].split()[1]
                                 maxThief = player[0]
@@ -732,14 +733,14 @@ async def on_message(message):
                             winners.append(player[0])
 
                     elif players[traitor][0] == 'agent':
-                        for player in list(players.items()):
+                        for player in players.items():
                             if player[1][0] == 'agent' and player[1][1] == 'dead':
                                 winners.append(player[0])
                                 break
 
                     elif players[traitor][0][:5] == 'thief':
                         godfatherWins = True
-                        for player in list(players.items()):
+                        for player in players.items():
                             if player[1][0] == 'loyal' or (player[1][0] == 'cleaner' and player[1][1] == 'alive'):
                                 winners.append(player[0])
                     
@@ -749,7 +750,9 @@ async def on_message(message):
                             if playersOrder[i] == winner:
                                 winnersIds.append(i)
 
-                    for player in list(players.items()):
+                    print(players)
+
+                    for player in players.items():
                         if player[1][0] == 'taxidriver':
                             for i in range(numberOfPlayers-1):
                                 if playersOrder[i] == player[0]:
